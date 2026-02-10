@@ -3,13 +3,14 @@ from datetime import datetime, timedelta
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 from app.gmail_helpers import get_email_body, clean_emails
+import base64
+from email.message import EmailMessage
 
 dotenv.load_dotenv()
 
 ACCESS_TOKEN = os.getenv("GMAIL_ACCESS_TOKEN")
 GROQ_API_URL = os.getenv("GROQ_API_URL")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-
 
 
 def summarize_emails(email_content):
@@ -77,8 +78,62 @@ def get_unread(hours_back=24):
     
     return formatted_output
 
-with open(f"tests/mock_data/email_batch_1.txt", "r") as f:
-    email_content = f.read()
-    summary = summarize_emails(email_content)
-    print(summary)
+
+
+def generate_draft(recipient_name: str, email_description: str) -> str:
+    """
+    Generates a draft email based on the recipient and description provided.
+    """
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}", 
+        "Content-Type": "application/json"
+    }
+    
+    data = {
+        "model": "llama-3.1-8b-instant",
+        "messages": [
+            {
+                "role": "system", 
+                "content": (
+                    "You are a professional writing assistant for a student. "
+                    "Do no include any preamble annoucing the draft at all. Start the response with a greeting or the body text directly. "
+                    "Your task is to write a clear, polite, and concise email body. "
+                    "STRICT RULES: Do not include a subject line. Do not include a preamble like 'Certainly!' or 'Here is your draft'. "
+                    "DO NOT use placeholders like '[Your Name]'. Use a natural, friendly tone."
+                    "Do not sign the email with a name."
+                )
+            },
+            {
+                "role": "user",
+                "content": f"Write an email to {recipient_name}. The core message is: {email_description}."
+            }
+        ],
+        "temperature": 0.7,
+        "max_tokens": 500
+    }
+
+    response = requests.post(GROQ_API_URL, headers=headers, json=data)
+    
+    if response.status_code == 200:
+        result = response.json()
+        return result["choices"][0]["message"]["content"].strip()
+    else:
+        raise Exception(f"Error: {response.status_code}, {response.text}")
+    
+
+
+def upsert_draft(body: str) -> str:
+    creds = Credentials(ACCESS_TOKEN)
+    service = build('gmail', 'v1', credentials=creds)
+
+    message = EmailMessage()
+    message.set_content(body)
+
+    # Gmail API requires base64url encoded string
+    encoded_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
+    
+    create_message = {'message': {'raw': encoded_message}}
+    draft = service.users().drafts().create(userId='me', body=create_message).execute()
+    
+    return f"Draft created successfully. ID: {draft['id']}"
 

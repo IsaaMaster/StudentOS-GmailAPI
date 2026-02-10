@@ -16,8 +16,8 @@ intent_descriptions = {
 }
 
 intent_aruguments = {
-    "gmail_draft": ["email description"],
-    "gmail_reply": ["reply recipient (name)", "email description"]}
+    "gmail_draft": ["recipient_name", "email_description"],
+    "gmail_reply": ["reply_recipient_name", "email_description"]}
 
 def mapIntent(command: str, intent_descriptions = intent_descriptions) -> str:
     """
@@ -98,11 +98,15 @@ def parseArguments(command : str, intent : str) -> dict:
         "messages": [
             {
                 "role": "system", 
-                "content": "You are a helpful assistant that outputs only valid JSON."
+                "content": (
+                    "You are a helpful assistant that outputs only valid JSON."
+                    "Given a user command and an intent, extract the neccessary arguments for that intent from the command."
+                    "Do not simple include parts of the command, but interpret the meaning to fill in the arguments as best as possible."
+                    )
             },
             {
                 "role": "user",
-                "content": f"Given the user command '{command}', extract arguments for the intent '{intent}': {intent_aruguments.get(intent,[])}. Return as a JSON object with only the 2 keys: {intent_aruguments.get(intent,[])}. If an argument is not present in the command, return an empty string for that argument."
+                "content": f"Given the user command '{command}', extract arguments for the intent '{intent}': {intent_aruguments.get(intent,[])}. Return as a JSON object with only the following keys: {intent_aruguments.get(intent,[])}. If an argument is not present in the command, return an empty string for that argument."
             }
         ],
         "response_format": {"type": "json_object"} 
@@ -119,6 +123,3 @@ def parseArguments(command : str, intent : str) -> dict:
     else:
         raise Exception(f"Error: {response.status_code}, {response.text}")
     
-
-
-

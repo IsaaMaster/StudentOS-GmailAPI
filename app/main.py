@@ -1,18 +1,30 @@
 from fastapi import FastAPI
 from app.reasoning import mapIntent, parseArguments
-from app.services import summarizeEmails
+from app.services import summarize_emails, get_unread, generate_draft, upsert_draft
 
 app = FastAPI(title="StudentOS API")
+
+intent_aruguments = {
+    "gmail_draft": ["email description"],
+    "gmail_reply": ["reply recipient (name)", "email description"]}
+
 
 @app.get("/gmail/{command}")
 def read_root(command: str):
     intent = mapIntent(command)
-    arguments = parseArguments(command, intent)
+
+    arguments = {}
+    if intent in intent_aruguments:
+        arguments = parseArguments(command, intent)
+
     executeCommand(intent, arguments)
     return {"intent": intent, "arguments": arguments}
 
 def executeCommand(intent: str, arguments: dict):
     if  intent == "summarize_emails":
-        return summarizeEmails(arguments)
-    # Placeholder for command execution logic
-    return {"status": "success", "intent": intent, "arguments": arguments}
+        return summarize_emails(get_unread())
+    elif intent == "gmail_draft":
+        draft = generate_draft(arguments['recipient (name)'], arguments['email description'])
+        return upsert_draft(draft)
+
+read_root("Draft an email to Dr. Keaney asking her to get lunch")

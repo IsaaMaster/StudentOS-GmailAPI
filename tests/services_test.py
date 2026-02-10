@@ -1,5 +1,5 @@
 import pytest
-from app.services import summarize_emails
+from app.services import summarize_emails, generate_draft
 import os, dotenv, requests
 
 dotenv.load_dotenv()
@@ -34,7 +34,7 @@ def test_summarize_emails(email_batch):
                     "- 10: Perfect. Fluid, single paragraph, < 150 words, no preamble, no special characters, no run-ons."
                     "- 8: High Quality. Adheres to all content rules but the 'flow' or conjunction usage could be smoother."
                     "- 6: Passable. Meets word count and avoids forbidden items, but includes a preamble or feels slightly choppy."
-                    "- 4: Sub-par. Contains prohibited items (links, IDs, special characters) or uses a list/bullet points."
+                    "- 3: Sub-par. Would very very hard to Alexa to read. Contains prohibited items (links, IDs, special characters) or uses a list/bullet points."
                     "- 1: Total Failure. Over 150 words, uses lists, contains links, or includes significant non-spoken text."
 
                     "### AUTOMATIC DEDUCTIONS (Mandatory -1 points each):"
@@ -58,3 +58,55 @@ def test_summarize_emails(email_batch):
     assert response.status_code == 200
     score = int(response.json()['choices'][0]['message']['content'].strip())
     assert score >= 6, f"Summary score too low: {score}"
+
+
+@pytest.mark.medium
+@pytest.mark.llm
+@pytest.mark.parametrize("recipient, description", [
+    ("Dr. Keaney", "asking her to get lunch"),
+    ("Professor Smith", "inquiring about the upcoming assignment"),
+    ("Mom", "telling her I'll be gone for the weekend"),
+])
+def test_generate_draft(recipient, description):
+    draft = generate_draft(recipient, description)
+
+    headers = {"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"}   
+    data = {
+        "model": "llama-3.3-70b-versatile",
+        "messages": [
+            {
+                "role": "system", 
+                "content": (
+                    "You are a Quality Assurance Judge evaluating email drafts against a strict set of constraints. "
+                    "Evaluate the provided draft based on the following specific criteria derived from the generation prompt." 
+
+                    "Note: Greetings (e.g., 'Hi Dr. Keaney,') are acceptable and do not count as preambles."
+
+                    "### THE RUBRIC (1-10):"
+                    "- 10: Perfect. Clear, polite, concise, no subject line, no preamble, natural friendly tone."
+                    "- 8: High Quality. Adheres to all content rules but could be slightly clearer or more polite."
+                    "- 6: Passable. Meets basic requirements but includes a subject line or preamble."
+                    "- 3: Sub-par. Lacks clarity, is impolite, or uses an unnatural tone."
+                    "- 1: Total Failure. Includes a subject line, preamble, or uses placeholders like '[Your Name]'."       
+                
+                    "### AUTOMATIC DEDUCTIONS (Mandatory -1 points each):"
+                    "1. Subject line inclusion."
+                    "2. Preamble inclusion (e.g., 'Certainly!' or 'Here is your draft')."
+                    "3. Use of placeholders like '[Your Name]'."
+                    "4. Signing the email with a name."
+
+                    "### OUTPUT FORMAT:"
+                    "You must respond with a score from 1 to 10 only, no additional text."
+                ),
+            },
+            {
+                "role": "user", 
+                "content": f"Evaluate this email draft for a student:\n\n{draft} given that the orginal request was to write an email to {recipient} about {description}."
+            }
+        ],
+        "temperature": 0.0,
+    }
+    response = requests.post(GROQ_API_URL, headers=headers, json=data)
+    assert response.status_code == 200
+    score = int(response.json()['choices'][0]['message']['content'].strip())
+    assert score >= 6, f"Draft score too low: {score}"  

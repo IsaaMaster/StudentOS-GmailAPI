@@ -3,8 +3,8 @@ from app.reasoning import mapIntent, parseArguments
 
 
 intent_aruguments = {
-    "gmail_draft": ["email description"],
-    "gmail_reply": ["reply recipient (name)", "email description"]}
+    "gmail_draft": ["recipient_name", "email_description"],
+    "gmail_reply": ["reply_recipient_name", "email_description"]}
 
 @pytest.mark.medium
 @pytest.mark.llm
@@ -61,5 +61,5 @@ def test_parse_arguments(command, intent, expected_keywords):
         assert arugment in result
 
     for keyword in expected_keywords:
-        assert keyword in result["email description"]
+        assert keyword in result["email_description"]
     
