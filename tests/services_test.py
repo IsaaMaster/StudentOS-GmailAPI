@@ -1,5 +1,5 @@
 import pytest
-from app.services import summarize_emails, generate_draft
+from app.generation_layer import summarize_emails, generate_draft
 import os, dotenv, requests
 
 dotenv.load_dotenv()

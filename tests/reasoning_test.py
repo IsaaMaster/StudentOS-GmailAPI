@@ -1,5 +1,5 @@
 import pytest
-from app.reasoning import mapIntent, parseArguments
+from app.intent_reasoning import mapIntent, parseArguments
 
 
 intent_aruguments = {

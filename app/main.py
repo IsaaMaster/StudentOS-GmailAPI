@@ -1,6 +1,7 @@
 from fastapi import FastAPI
-from app.reasoning import mapIntent, parseArguments
-from app.services import summarize_emails, get_unread, generate_draft, upsert_draft
+from app.intent_reasoning import mapIntent, parseArguments
+from app.gmail_services import get_unread, upsert_draft
+from app.generation_layer import summarize_emails, generate_draft
 
 app = FastAPI(title="StudentOS API")
 

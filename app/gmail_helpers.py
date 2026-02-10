@@ -1,4 +1,4 @@
-import base64, os, re, requests
+import base64, re
 
 def get_email_body(payload):
     """Recursively finds the text/plain part of the email and ignores HTML/Attachments."""
