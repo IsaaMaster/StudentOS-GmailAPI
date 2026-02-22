@@ -7,8 +7,8 @@ GROQ_API_URL = os.getenv("GROQ_API_URL")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 def summarize_emails(email_content):
-    if not email_content or "no unread emails" in email_content.lower():
-        return email_content
+    if not email_content or "no unread emails" in email_content:
+        return "You have no new emails. Enjoy your day!"
 
     headers = {"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"}   
     data = {
@@ -83,3 +83,53 @@ def generate_draft(recipient_name: str, email_description: str) -> str:
     else:
         raise Exception(f"Error: {response.status_code}, {response.text}")
     
+
+def generate_reply(thread_body: str, recipient_name: str, reply_description: str) -> str:
+    """
+    Generates a reply email based on the thread body and description provided.
+    """
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}", 
+        "Content-Type": "application/json"
+    }
+    
+    data = {
+        "model": "llama-3.1-8b-instant",
+        "messages": [
+            {
+                "role": "system", 
+                "content": (
+                    "You are a professional writing assistant for a student. "
+                    "Your task is to write a polite and concise email reply based on a provided thread. "
+                    "STRICT RULES: \n"
+                    "1. No preamble (e.g., 'Here is your reply'). Start with the greeting.\n"
+                    "2. Do not include a subject line.\n"
+                    "3. DO NOT use placeholders like '[Your Name]'.\n"
+                    "4. Do not sign the email with a name.\n"
+                    "5. Ensure the tone matches the previous thread but prioritize the user's specific reply instructions."
+                )
+            },
+            {
+                "role": "user",
+                "content": (
+                    f"--- PREVIOUS THREAD CONTEXT ---\n{thread_body}\n\n"
+                    f"--- REPLY INSTRUCTIONS ---\n"
+                    f"Recipient: {recipient_name}\n"
+                    f"My Intent: {reply_description}\n\n"
+                    f"Write the reply now:"
+                )
+            }
+        ],
+        "temperature": 0.7,
+        "max_tokens": 600
+    }
+
+    response = requests.post(GROQ_API_URL, headers=headers, json=data)
+    
+    if response.status_code == 200:
+        result = response.json()
+        return result["choices"][0]["message"]["content"].strip()
+    else:
+        raise Exception(f"Error: {response.status_code}, {response.text}")
+
+

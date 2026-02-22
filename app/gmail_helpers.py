@@ -16,11 +16,31 @@ def get_email_body(payload):
     return ""
 
 def clean_emails(email_body):
+    # 1. TRUNCATE QUOTED TEXT
+    # This regex looks for common "On [Date], [Name] wrote:" patterns
+    # It also handles the Spanish "El [Date] escribió:" found in your logs
+    reply_patterns = [
+        r'(^|\n)On\s+.*\s+wrote:.*',          # English: On ... wrote:
+        r'(^|\n)El\s+.*\s+escribió:.*',      # Spanish: El ... escribió:
+        r'(^|\n)---*\s*Original Message\s*---*', # Common Outlook header
+        r'(^|\n)________________________________', # Visual dividers
+        r'(^|\n)From:\s*.*?\nSent:\s*.*'      # Forwarded/Inline styles
+    ]
+
+    for pattern in reply_patterns:
+        # We use re.DOTALL to ensure we catch everything after the match
+        match = re.search(pattern, email_body, re.IGNORECASE | re.MULTILINE)
+        if match:
+            email_body = email_body[:match.start()]
+            break
+
+    # 2. STANDARD CLEANING 
     email_body = re.sub(r'\s+', ' ', email_body).strip()  # Remove excessive whitespace
     for link_pattern in [r'http\S+', r'www\.\S+']:
         email_body = re.sub(link_pattern, '', email_body)
     email_body = re.sub(r'\S+@\S+', '', email_body) 
 
     if len(email_body) > 2000:
-        email_body = email_body[:3000] + " ... [truncated]"
-    return email_body 
+        email_body = email_body[:2000] + " ... [truncated]"
+    
+    return email_body
