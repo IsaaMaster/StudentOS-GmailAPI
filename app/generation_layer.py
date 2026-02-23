@@ -5,6 +5,7 @@ dotenv.load_dotenv()
 ACCESS_TOKEN = os.getenv("GMAIL_ACCESS_TOKEN")
 GROQ_API_URL = os.getenv("GROQ_API_URL")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+GENERATION_MODEL = os.getenv("GENERATION_MODEL")
 
 def summarize_emails(email_content):
     if not email_content or "no unread emails" in email_content:
@@ -12,7 +13,7 @@ def summarize_emails(email_content):
 
     headers = {"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"}   
     data = {
-        "model": "llama-3.1-8b-instant",
+        "model": GENERATION_MODEL,
         "messages": [
             {
                 "role": "system", 
@@ -53,7 +54,7 @@ def generate_draft(recipient_name: str, email_description: str) -> str:
     }
     
     data = {
-        "model": "llama-3.1-8b-instant",
+        "model": GENERATION_MODEL,
         "messages": [
             {
                 "role": "system", 
@@ -94,7 +95,7 @@ def generate_reply(thread_body: str, recipient_name: str, reply_description: str
     }
     
     data = {
-        "model": "llama-3.1-8b-instant",
+        "model": GENERATION_MODEL,
         "messages": [
             {
                 "role": "system", 

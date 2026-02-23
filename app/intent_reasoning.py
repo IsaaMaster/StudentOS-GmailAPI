@@ -7,12 +7,13 @@ load_dotenv()
 
 GROQ_API_URL = os.getenv("GROQ_API_URL")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+REASONING_MODEL = os.getenv("REASONING_MODEL")
 
 intent_descriptions = {
     "gmail_summarize": "Summarize unread Emails",
     "gmail_draft": "Draft an Email in a completely new email chain",
     "gmail_reply": "Reply to Email in a current email chain",
-    "none" : "Select this if none of the other actions are applicable"
+    "none": "Select this if none of the other actions are applicable"
 }
 
 intent_aruguments = {
@@ -35,7 +36,7 @@ def mapIntent(command: str, intent_descriptions = intent_descriptions) -> str:
         "Authorization": f"Bearer {GROQ_API_KEY}",
     }   
     data = {
-        "model": "llama-3.1-8b-instant",
+        "model": REASONING_MODEL,
         "messages": [
             {
                 "role": "system",
@@ -43,6 +44,7 @@ def mapIntent(command: str, intent_descriptions = intent_descriptions) -> str:
                     "You are a command classifier for a student voice assistant. "
                     "Your task is to output EXACTLY one of the provided action keys and NOTHING else. "
                     "Do not include conversational text, do not include quotes, and do not explain your reasoning."
+                    "Watch out for phenetic errors like 'summer eyes' which actually means 'summarize', or 'read play' which actually means 'reply'." 
                 )
             },
             {
@@ -94,19 +96,27 @@ def parseArguments(command : str, intent : str) -> dict:
     }
 
     data = {
-        "model": "llama-3.1-8b-instant",
+        "model": REASONING_MODEL,
         "messages": [
             {
                 "role": "system", 
                 "content": (
-                    "You are a helpful assistant that outputs only valid JSON."
-                    "Given a user command and an intent, extract the neccessary arguments for that intent from the command."
-                    "Do not simple include parts of the command, but interpret the meaning to fill in the arguments as best as possible."
-                    )
+                    "You are a semantic parser. Your goal is to extract structured arguments from a voice command without losing specific details.\n"
+                    "INSTRUCTIONS:\n"
+                    "1. RECIPIENT: Extract the specific person or entity. Remove lead-in words like 'to' or 'an email to'.\n"
+                    "2. EMAIL_DESCRIPTION: Extract the EXACT message details. Do NOT summarize. Keep specific times, locations, and questions (e.g., 'at the DC' or 'ten minutes late').\n"
+                    "3. REPHRASING: Convert first-person commands into a direct message format. (e.g., 'tell him I am sick' -> 'I am sick').\n"
+                    "4. EMPTY VALUES: If an argument is missing, return an empty string."
+                )
             },
             {
                 "role": "user",
-                "content": f"Given the user command '{command}', extract arguments for the intent '{intent}': {intent_aruguments.get(intent,[])}. Return as a JSON object with only the following keys: {intent_aruguments.get(intent,[])}. If an argument is not present in the command, return an empty string for that argument."
+                "content": (
+                    f"User Command: '{command}'\n"
+                    f"Intent: '{intent}'\n"
+                    f"Required JSON Keys: {intent_aruguments.get(intent, [])}\n"
+                    "Return valid JSON only."
+                )
             }
         ],
         "response_format": {"type": "json_object"} 

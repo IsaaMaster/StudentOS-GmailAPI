@@ -6,6 +6,7 @@ dotenv.load_dotenv()
 ACCESS_TOKEN = os.getenv("GMAIL_ACCESS_TOKEN")
 GROQ_API_URL = os.getenv("GROQ_API_URL")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+REASONING_MODEL = os.getenv("REASONING_MODEL")
 
 def find_reply_match(unread_emails, match_recipient, match_description):
     """
@@ -16,7 +17,7 @@ def find_reply_match(unread_emails, match_recipient, match_description):
         "Authorization": f"Bearer {GROQ_API_KEY}",
     }
     data = {
-    "model": "llama-3.1-8b-instant",
+    "model": REASONING_MODEL,
     "messages": [
         {
             "role": "system",
