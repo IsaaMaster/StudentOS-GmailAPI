@@ -38,10 +38,10 @@ def summarize_emails(email_content):
 
     response = requests.post(GROQ_API_URL, headers=headers, json=data)
     if response.status_code == 200:
-        print(f"DEBUG: Tokens used: {response.json()['usage']['total_tokens']}")
-        return response.json()['choices'][0]['message']['content'] if response.status_code == 200 else f"Error: {response.text}"
+        return response.json()['choices'][0]['message']['content'] 
     else:
-        return f"Error: {response.status_code}, {response.text}"
+        print(f"Error: {response.status_code}, {response.text}")
+        return "Sorry, I had trouble summarizing your emails."
 
 
 def generate_draft(recipient_name: str, email_description: str) -> str:
@@ -80,9 +80,9 @@ def generate_draft(recipient_name: str, email_description: str) -> str:
     
     if response.status_code == 200:
         result = response.json()
-        return result["choices"][0]["message"]["content"].strip()
+        return True, result["choices"][0]["message"]["content"].strip()
     else:
-        raise Exception(f"Error: {response.status_code}, {response.text}")
+        return False, f"Error: {response.status_code}, {response.text}"
     
 
 def generate_reply(thread_body: str, recipient_name: str, reply_description: str) -> str:
@@ -129,8 +129,8 @@ def generate_reply(thread_body: str, recipient_name: str, reply_description: str
     
     if response.status_code == 200:
         result = response.json()
-        return result["choices"][0]["message"]["content"].strip()
+        return True, result["choices"][0]["message"]["content"].strip()
     else:
-        raise Exception(f"Error: {response.status_code}, {response.text}")
+        return False, f"Error: {response.status_code}, {response.text}"
 
 
