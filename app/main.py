@@ -12,29 +12,39 @@ intent_aruguments = {
     "gmail_reply": ["reply_recipient_name", "email_description"]}
 
 
+from fastapi import Header, HTTPException
+
 @app.get("/gmail/{command}")
-def read_root(command: str):
+def read_root(command: str, authorization: str = Header(None)):
+    if not authorization or not authorization.startswith("Bearer "):
+        return "Please link your Gmail account in the Alexa app."
+    
+    access_token = authorization.split(" ")[1]
+
     intent = mapIntent(command)
+    
+    if intent == "none":
+        return "Sorry, I couldn't understand your command."
 
     arguments = {}
     if intent in intent_aruguments:
         arguments = parseArguments(command, intent)
     
-    if intent == "none":
-        return "Sorry, I couldn't understand your command."
     try: 
-        result = executeCommand(intent, arguments)
+        result = executeCommand(intent, arguments, access_token)
         return result
     except Exception as e:
-        return f"There's a problem with the server. Please try again later."    
+        print(f"Server Error: {e}")
+        return "There's a problem with the server. Please try again later."   
 
 
-def executeCommand(intent: str, arguments: dict):
+def executeCommand(intent: str, arguments: dict, access_token: str) -> str:
     if  intent == "gmail_summarize":
         try: 
-            emails = get_unread()
+            emails = get_unread(access_token=access_token)
         except Exception as e:
-            return f"There's a problem with the Gmail servier. I couldn't retrieve your emails. Please try again later."
+            print(f"Gmail Error: {e}")
+            return f"There's a problem with the Gmail server. I couldn't retrieve your emails. Please try again later."
         
         aggregated_emails = ""
         for email in emails.values():
@@ -43,7 +53,7 @@ def executeCommand(intent: str, arguments: dict):
     
     elif intent == "gmail_draft":
         draft = generate_draft(arguments['recipient_name'], arguments['email_description'])
-        success, result = upsert_draft(draft)
+        success, result = upsert_draft(draft, access_token=access_token)
         if success:
             return "Draft created successfully."
         else:
@@ -51,13 +61,14 @@ def executeCommand(intent: str, arguments: dict):
     
     elif intent == "gmail_reply":
         try: 
-            emails = get_unread(hours_back=72, max_results=8)
+            emails = get_unread(hours_back=72, max_results=8, access_token=access_token)
         except Exception as e:
+            print(f"Gmail Error: {e}")
             return f"There's a problem with the Gmail servier. I couldn't retrieve your emails. Please try again later."
 
         best_match_id = find_reply_match(emails, arguments['reply_recipient_name'], arguments['email_description'])
         reply = generate_reply(emails[best_match_id], arguments['reply_recipient_name'], arguments['email_description'])
-        success, result = upsert_reply(reply, best_match_id, rfc_id=emails[best_match_id]['rfc-id'], subject=emails[best_match_id]['subject'], to_email=emails[best_match_id]['from-email'])
+        success, result = upsert_reply(reply, best_match_id, rfc_id=emails[best_match_id]['rfc-id'], subject=emails[best_match_id]['subject'], to_email=emails[best_match_id]['from-email'], access_token=access_token)
         if success:
             return "Reply created successfully."
         else:

@@ -16,8 +16,8 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 
 
-def get_unread(hours_back=24, max_results=3) -> str:
-    creds = Credentials(ACCESS_TOKEN)
+def get_unread(hours_back=24, max_results=3, access_token = ACCESS_TOKEN) -> str:
+    creds = Credentials(access_token)
       
     service = build('gmail', 'v1', credentials=creds)
     
@@ -49,8 +49,8 @@ def get_unread(hours_back=24, max_results=3) -> str:
 
 
 
-def upsert_draft(body: str) -> str:
-    creds = Credentials(ACCESS_TOKEN)
+def upsert_draft(body: str, access_token: str = ACCESS_TOKEN) -> str:
+    creds = Credentials(access_token)
     service = build('gmail', 'v1', credentials=creds)
 
     message = EmailMessage()
@@ -66,11 +66,11 @@ def upsert_draft(body: str) -> str:
 
 
 
-def upsert_reply(body: str, thread_id: str, rfc_id: str, subject: str, to_email: str) -> str:
+def upsert_reply(body: str, thread_id: str, rfc_id: str, subject: str, to_email: str, access_token: str = ACCESS_TOKEN) -> str:
     """
     Creates a Gmail draft that is correctly threaded as a reply.
     """
-    creds = Credentials(ACCESS_TOKEN)
+    creds = Credentials(access_token)
     service = build('gmail', 'v1', credentials=creds)
 
     # 1. Create the MIME message
