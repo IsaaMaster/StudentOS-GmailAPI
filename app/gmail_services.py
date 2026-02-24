@@ -49,7 +49,7 @@ def get_unread(hours_back=24, max_results=3, access_token = ACCESS_TOKEN) -> str
 
 
 
-def upsert_draft(body: str, access_token: str = ACCESS_TOKEN) -> str:
+def upsert_draft(body: str, access_token: str = ACCESS_TOKEN) -> tuple:
     creds = Credentials(access_token)
     service = build('gmail', 'v1', credentials=creds)
 
@@ -58,15 +58,15 @@ def upsert_draft(body: str, access_token: str = ACCESS_TOKEN) -> str:
 
     # Gmail API requires base64url encoded string
     encoded_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
-    
+
     create_message = {'message': {'raw': encoded_message}}
     draft = service.users().drafts().create(userId='me', body=create_message).execute()
-    
-    return f"Draft created successfully. ID: {draft['id']}"
+
+    return (True, f"Draft created successfully. ID: {draft['id']}")
 
 
 
-def upsert_reply(body: str, thread_id: str, rfc_id: str, subject: str, to_email: str, access_token: str = ACCESS_TOKEN) -> str:
+def upsert_reply(body: str, thread_id: str, rfc_id: str, subject: str, to_email: str, access_token: str = ACCESS_TOKEN) -> tuple:
     """
     Creates a Gmail draft that is correctly threaded as a reply.
     """
@@ -76,12 +76,12 @@ def upsert_reply(body: str, thread_id: str, rfc_id: str, subject: str, to_email:
     # 1. Create the MIME message
     message = EmailMessage()
     message.set_content(body)
-    
+
     # 2. Add the "Stitch" Headers
     # Ensure subject starts with Re:
     if not subject.lower().startswith("re:"):
         subject = f"Re: {subject}"
-        
+
     message['Subject'] = subject
     message['To'] = to_email
     message['In-Reply-To'] = rfc_id
@@ -89,7 +89,7 @@ def upsert_reply(body: str, thread_id: str, rfc_id: str, subject: str, to_email:
 
     # 3. Encode to base64url
     encoded_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
-    
+
     # 4. Create the Draft object
     create_message = {
         'message': {
@@ -97,7 +97,7 @@ def upsert_reply(body: str, thread_id: str, rfc_id: str, subject: str, to_email:
             'threadId': thread_id  # This tells Gmail's DB where to put it
         }
     }
-    
+
     draft = service.users().drafts().create(userId='me', body=create_message).execute()
-    
-    return f"Reply draft created successfully. ID: {draft['id']}"
+
+    return (True, f"Reply draft created successfully. ID: {draft['id']}")
