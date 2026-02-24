@@ -1,4 +1,5 @@
 import os, dotenv, requests
+import logging
 
 dotenv.load_dotenv()
 
@@ -7,16 +8,20 @@ GROQ_API_URL = os.getenv("GROQ_API_URL")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 GENERATION_MODEL = os.getenv("GENERATION_MODEL")
 
+logger = logging.getLogger(__name__)
+
 def summarize_emails(email_content):
     if not email_content or "no unread emails" in email_content:
+        logger.info("No unread emails to summarize")
         return "You have no new emails. Enjoy your day!"
 
-    headers = {"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"}   
+    logger.info("Calling GROQ API to summarize emails")
+    headers = {"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"}
     data = {
         "model": GENERATION_MODEL,
         "messages": [
             {
-                "role": "system", 
+                "role": "system",
                 "content": (
                     "You are a minimalist voice assistant briefing a student. "
                     "Provide a single, fluid paragraph containing all updates (Less than 100 words). "
@@ -27,9 +32,9 @@ def summarize_emails(email_content):
                     "Avoid run-on sentences."
                     "Example: 'The Dean invited you to a social this Friday, and your Amazon package has arrived.'"
                 ),
-            }, 
+            },
             {
-                "role": "user", 
+                "role": "user",
                 "content": f"Summarize these emails into one smooth spoken update:\n\n{email_content}"
             }
         ],
@@ -38,9 +43,11 @@ def summarize_emails(email_content):
 
     response = requests.post(GROQ_API_URL, headers=headers, json=data)
     if response.status_code == 200:
-        return response.json()['choices'][0]['message']['content'] 
+        result = response.json()['choices'][0]['message']['content']
+        logger.info("Email summary generated successfully")
+        return result
     else:
-        print(f"Error: {response.status_code}, {response.text}")
+        logger.error(f"GROQ API error: {response.status_code} - {response.text}")
         return "Sorry, I had trouble summarizing your emails."
 
 
@@ -48,16 +55,17 @@ def generate_draft(recipient_name: str, email_description: str) -> str:
     """
     Generates a draft email based on the recipient and description provided.
     """
+    logger.info(f"Generating draft email for {recipient_name}: {email_description}")
     headers = {
-        "Authorization": f"Bearer {GROQ_API_KEY}", 
+        "Authorization": f"Bearer {GROQ_API_KEY}",
         "Content-Type": "application/json"
     }
-    
+
     data = {
         "model": GENERATION_MODEL,
         "messages": [
             {
-                "role": "system", 
+                "role": "system",
                 "content": (
                     "You are a professional writing assistant for a student. "
                     "Do no include any preamble annoucing the draft at all. Start the response with a greeting or the body text directly. "
@@ -76,29 +84,38 @@ def generate_draft(recipient_name: str, email_description: str) -> str:
         "max_tokens": 500
     }
 
-    response = requests.post(GROQ_API_URL, headers=headers, json=data)
-    
-    if response.status_code == 200:
-        result = response.json()
-        return True, result["choices"][0]["message"]["content"].strip()
-    else:
-        return False, f"Error: {response.status_code}, {response.text}"
+    try:
+        response = requests.post(GROQ_API_URL, headers=headers, json=data)
+
+        if response.status_code == 200:
+            result = response.json()
+            draft = result["choices"][0]["message"]["content"].strip()
+            logger.info(f"Draft generated successfully (length: {len(draft)} chars)")
+            return draft
+        else:
+            error_msg = f"GROQ API error: {response.status_code} - {response.text}"
+            logger.error(error_msg)
+            return error_msg
+    except Exception as e:
+        logger.error(f"Exception while generating draft: {e}", exc_info=True)
+        return f"Error generating draft: {str(e)}"
     
 
 def generate_reply(thread_body: str, recipient_name: str, reply_description: str) -> str:
     """
     Generates a reply email based on the thread body and description provided.
     """
+    logger.info(f"Generating reply email to {recipient_name}: {reply_description}")
     headers = {
-        "Authorization": f"Bearer {GROQ_API_KEY}", 
+        "Authorization": f"Bearer {GROQ_API_KEY}",
         "Content-Type": "application/json"
     }
-    
+
     data = {
         "model": GENERATION_MODEL,
         "messages": [
             {
-                "role": "system", 
+                "role": "system",
                 "content": (
                     "You are a professional writing assistant for a student. "
                     "Your task is to write a polite and concise email reply based on a provided thread. "
@@ -125,12 +142,20 @@ def generate_reply(thread_body: str, recipient_name: str, reply_description: str
         "max_tokens": 600
     }
 
-    response = requests.post(GROQ_API_URL, headers=headers, json=data)
-    
-    if response.status_code == 200:
-        result = response.json()
-        return True, result["choices"][0]["message"]["content"].strip()
-    else:
-        return False, f"Error: {response.status_code}, {response.text}"
+    try:
+        response = requests.post(GROQ_API_URL, headers=headers, json=data)
+
+        if response.status_code == 200:
+            result = response.json()
+            reply = result["choices"][0]["message"]["content"].strip()
+            logger.info(f"Reply generated successfully (length: {len(reply)} chars)")
+            return reply
+        else:
+            error_msg = f"GROQ API error: {response.status_code} - {response.text}"
+            logger.error(error_msg)
+            return error_msg
+    except Exception as e:
+        logger.error(f"Exception while generating reply: {e}", exc_info=True)
+        return f"Error generating reply: {str(e)}"
 
 
