@@ -164,4 +164,3 @@ def executeCommand(intent: str, arguments: dict, access_token = ACCESS_TOKEN) ->
 ## Draft Email
 #print(upsert_draft(generate_draft("Professor Smith", "asking for an extension on the upcoming assignment because I have been sick")))
 
-print(executeCommand("gmail_summarize", {}, access_token=ACCESS_TOKEN))
