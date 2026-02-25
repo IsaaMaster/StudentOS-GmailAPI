@@ -78,7 +78,7 @@ def executeCommand(intent: str, arguments: dict, access_token = ACCESS_TOKEN) ->
             logger.info(f"Retrieved {len(emails)} unread emails")
             if len(emails) == 0:
                 logger.info("No unread emails found")
-                return "You have no unread emails."
+                return "You have no new unread emails."
         except Exception as e:
             logger.error(f"Error retrieving unread emails: {e}", exc_info=True)
             return f"There's a problem with the Gmail server. I couldn't retrieve your emails. Please try again later."
@@ -159,3 +159,5 @@ def executeCommand(intent: str, arguments: dict, access_token = ACCESS_TOKEN) ->
 
 ## Draft Email
 #print(upsert_draft(generate_draft("Professor Smith", "asking for an extension on the upcoming assignment because I have been sick")))
+
+print(executeCommand("gmail_summarize", {}, access_token=ACCESS_TOKEN))

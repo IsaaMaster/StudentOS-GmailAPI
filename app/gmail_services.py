@@ -33,7 +33,7 @@ def get_unread(hours_back=24, max_results=3, access_token = ACCESS_TOKEN) -> str
 
         if not messages:
             logger.info(f"No unread emails found from last {hours_back} hours")
-            return f"You have no unread emails from the last {hours_back} hours."
+            return {}
 
         logger.info(f"Found {len(messages)} unread messages, fetching full details")
         emails = {}
