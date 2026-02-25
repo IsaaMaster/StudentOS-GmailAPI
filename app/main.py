@@ -76,6 +76,9 @@ def executeCommand(intent: str, arguments: dict, access_token = ACCESS_TOKEN) ->
         try:
             emails = get_unread(access_token=access_token)
             logger.info(f"Retrieved {len(emails)} unread emails")
+            if len(emails) == 0:
+                logger.info("No unread emails found")
+                return "You have no unread emails."
         except Exception as e:
             logger.error(f"Error retrieving unread emails: {e}", exc_info=True)
             return f"There's a problem with the Gmail server. I couldn't retrieve your emails. Please try again later."
