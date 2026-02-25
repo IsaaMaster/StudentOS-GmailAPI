@@ -125,6 +125,10 @@ def executeCommand(intent: str, arguments: dict, access_token = ACCESS_TOKEN) ->
             best_match_id = find_reply_match(emails, arguments['reply_recipient_name'], arguments['email_description'])
             logger.debug(f"Found best match email ID: {best_match_id}")
 
+            if best_match_id == 'none':
+                logger.info("No suitable email found for reply")
+                return "I couldn't find a matching email to reply to. Please try again."
+
             success, reply = generate_reply(emails[best_match_id], arguments['reply_recipient_name'], arguments['email_description'])
             if not success:
                 logger.error(f"Reply generation failed: {reply}")
