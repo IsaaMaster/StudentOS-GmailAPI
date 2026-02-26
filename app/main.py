@@ -22,8 +22,6 @@ logger = logging.getLogger(__name__)
 app = FastAPI(title="StudentOS API")
 
 
-
-
 intent_aruguments = {
     "gmail_draft": ["recipient_name", "email_description"],
     "gmail_reply": ["reply_recipient_name", "email_description"]}
@@ -129,11 +127,9 @@ def executeCommand(intent: str, arguments: dict, access_token = ACCESS_TOKEN) ->
                 logger.info("No suitable email found for reply")
                 return "I couldn't find a matching email to reply to. Please try again."
 
-            success, reply = generate_reply(emails[best_match_id], arguments['reply_recipient_name'], arguments['email_description'])
-            if not success:
-                logger.error(f"Reply generation failed: {reply}")
-                return reply
-            logger.debug(f"Generated reply to {arguments['reply_recipient_name']}")
+       
+            reply = generate_reply(emails[best_match_id], arguments['reply_recipient_name'], arguments['email_description'])
+            logger.debug(f"Generated reply to {arguments['reply_recipient_name']}: {reply}")
 
             success, result = upsert_reply(reply, best_match_id, rfc_id=emails[best_match_id]['rfc-id'], subject=emails[best_match_id]['subject'], to_email=emails[best_match_id]['from-email'], access_token=access_token)
             if success:
