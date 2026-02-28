@@ -16,7 +16,8 @@ intent_descriptions = {
     "none": "Select this if none of the other actions are applicable"
 }
 
-intent_aruguments = {
+intent_arguments = {
+    "gmail_summarize": ["lookback_period_units", "lookback_period_value"],
     "gmail_draft": ["recipient_name", "email_description"],
     "gmail_reply": ["reply_recipient_name", "email_description"]}
 
@@ -101,12 +102,18 @@ def parseArguments(command : str, intent : str) -> dict:
             {
                 "role": "system", 
                 "content": (
-                    "You are a semantic parser. Your goal is to extract structured arguments from a voice command without losing specific details.\n"
-                    "INSTRUCTIONS:\n"
-                    "1. RECIPIENT: Extract the specific person or entity. Remove lead-in words like 'to' or 'an email to'.\n"
-                    "2. EMAIL_DESCRIPTION: Extract the EXACT message details. Do NOT summarize. Keep specific times, locations, and questions (e.g., 'at the DC' or 'ten minutes late').\n"
-                    "3. REPHRASING: Convert first-person commands into a direct message format. (e.g., 'tell him I am sick' -> 'I am sick').\n"
-                    "4. EMPTY VALUES: If an argument is missing, return an empty string."
+                    "You are a strict semantic parser. You MUST output a JSON object using the exact keys provided by the user.\n\n"
+                    "RULES:\n"
+                    "1. KEY CASING: Use only the exact casing provided in the 'Required JSON Keys'.\n"
+                    "2. LOOKBACK_PERIOD_VALUE: Extract only the digit/number (e.g., '22' or '5'). \n"
+                    "   - If no number is mentioned but a unit is (e.g., 'the last hour'), use '1'.\n"
+                    "   - Return as an INTEGER or a numeric string.\n"
+                    "3. LOOKBACK_PERIOD_UNITS: Extract the time unit (e.g., 'minutes', 'hours', 'days').\n"
+                    "   - Always use the plural form: 'minutes', 'hours', or 'days'.\n"
+                    "4. RECIPIENT_NAME: Extract the person or entity. Strip lead-in words like 'to' or 'send to'.\n"
+                    "5. EMAIL_DESCRIPTION: Keep exact phrasing of the message. Do not summarize or change perspective.\n"
+                    "6. EMPTY VALUES: Use '' for missing text. IMPORTANT: Default lookback_period_value to 24 and units to 'hours' if unspecified.\n"
+                    "7. OUTPUT: Return ONLY valid JSON. No preamble, no markdown."
                 )
             },
             {
@@ -114,16 +121,14 @@ def parseArguments(command : str, intent : str) -> dict:
                 "content": (
                     f"User Command: '{command}'\n"
                     f"Intent: '{intent}'\n"
-                    f"Required JSON Keys: {intent_aruguments.get(intent, [])}\n"
-                    "Return valid JSON only."
+                    f"Required JSON Keys: {list(intent_arguments.get(intent, []))}\n"
+                    "Target JSON Schema: Return an object with these exact keys."
                 )
             }
         ],
         "response_format": {"type": "json_object"} 
     }
-    
     response = requests.post(GROQ_API_URL, headers=headers, json=data)
-    
     if response.status_code == 200:
         result = response.json()
         # The content is returned as a STRING that looks like JSON
@@ -133,3 +138,5 @@ def parseArguments(command : str, intent : str) -> dict:
     else:
         raise Exception(f"Error: {response.status_code}, {response.text}")
     
+
+print(parseArguments("get the tea in my inbox", "gmail_summarize"))

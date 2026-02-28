@@ -3,6 +3,7 @@ from app.intent_reasoning import mapIntent, parseArguments
 from app.gmail_services import get_unread, upsert_draft, upsert_reply
 from app.generation_layer import summarize_emails, generate_draft, generate_reply
 from app.gmail_reasoning import find_reply_match
+from app.utils import calculate_seconds
 import os
 from dotenv import load_dotenv
 import logging
@@ -22,7 +23,8 @@ logger = logging.getLogger(__name__)
 app = FastAPI(title="StudentOS API")
 
 
-intent_aruguments = {
+intent_arguments = {
+    "gmail_summarize": ["lookback_period_units", "lookback_period_value"],
     "gmail_draft": ["recipient_name", "email_description"],
     "gmail_reply": ["reply_recipient_name", "email_description"]}
 
@@ -33,7 +35,7 @@ from fastapi import Header, HTTPException
 def read_root(command: str, authorization: str = Header(None)):
     logger.info(f"Received command: {command}")
 
-    if not authorization or not authorization.startswith("Bearer "):
+    if not authorization:
         logger.warning("Missing or invalid authorization header")
         return "Please link your Gmail account in the Alexa app."
 
@@ -51,7 +53,7 @@ def read_root(command: str, authorization: str = Header(None)):
         return "Sorry, I couldn't understand your command."
 
     arguments = {}
-    if intent in intent_aruguments:
+    if intent in intent_arguments:
         try:
             arguments = parseArguments(command, intent)
             logger.info(f"Parsed arguments: {arguments}")
@@ -72,7 +74,8 @@ def executeCommand(intent: str, arguments: dict, access_token = ACCESS_TOKEN) ->
     if intent == "gmail_summarize":
         logger.info("Executing gmail_summarize")
         try:
-            emails = get_unread(access_token=access_token)
+            hours_back = calculate_seconds(arguments["lookback_period_value"], arguments["lookback_period_units"])/3600 if "lookback_period_units" in arguments and "lookback_period_value" in arguments else 24
+            emails = get_unread(hours_back=hours_back, access_token=access_token)
             logger.info(f"Retrieved {len(emails)} unread emails")
             if len(emails) == 0:
                 logger.info("No unread emails found")
@@ -159,4 +162,3 @@ def executeCommand(intent: str, arguments: dict, access_token = ACCESS_TOKEN) ->
 
 ## Draft Email
 #print(upsert_draft(generate_draft("Professor Smith", "asking for an extension on the upcoming assignment because I have been sick")))
-

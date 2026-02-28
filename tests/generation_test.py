@@ -1,6 +1,7 @@
 import pytest
 from app.generation_layer import summarize_emails, generate_draft, generate_reply
 import os, dotenv, requests
+import time
 
 dotenv.load_dotenv()
 
@@ -8,8 +9,7 @@ GROQ_API_URL = os.getenv("GROQ_API_URL")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 TESTING_MODEL = os.getenv("VALIDATION_MODEL")
 
-@pytest.mark.medium
-@pytest.mark.llm
+
 @pytest.mark.parametrize("email_batch", [
     ("email_batch_1"),
     ("email_batch_2"),
@@ -59,10 +59,10 @@ def test_summarize_emails(email_batch):
     assert response.status_code == 200
     score = int(response.json()['choices'][0]['message']['content'].strip())
     assert score >= 6, f"Summary score too low: {score}"
+    time.sleep(5)
 
 
-@pytest.mark.medium
-@pytest.mark.llm
+
 @pytest.mark.parametrize("recipient, description", [
     ("Dr. Keaney", "asking her to get lunch"),
     ("Professor Smith", "inquiring about the upcoming assignment"),
@@ -110,11 +110,11 @@ def test_generate_draft(recipient, description):
     response = requests.post(GROQ_API_URL, headers=headers, json=data)
     assert response.status_code == 200
     score = int(response.json()['choices'][0]['message']['content'].strip())
-    assert score >= 6, f"Draft score too low: {score}"  
+    assert score >= 6, f"Draft score too low: {score}" 
+    time.sleep(5) 
 
 
-@pytest.mark.medium
-@pytest.mark.llm
+
 @pytest.mark.parametrize("email,recipient,description", [
     ("single_email_1", "Tara", "telling her I want to walk with Computer Science"),
     ("single_email_2", "Kaisa", "letting her know I can't make it to the meeting"),
@@ -168,4 +168,5 @@ def test_generate_reply(email, recipient, description):
     assert response.status_code == 200
     score = int(response.json()['choices'][0]['message']['content'].strip())
     assert score >= 6, f"Reply score too low: {score}"
+    time.sleep(5)
     

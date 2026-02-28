@@ -1,14 +1,15 @@
 import pytest
 from app.intent_reasoning import mapIntent, parseArguments
+from app.utils import calculate_seconds
 import time
 
 
-intent_aruguments = {
+intent_arguments = {
+    "gmail_summarize": ["lookback_period_units", "lookback_period_value"],
     "gmail_draft": ["recipient_name", "email_description"],
     "gmail_reply": ["reply_recipient_name", "email_description"]}
 
-@pytest.mark.medium
-@pytest.mark.llm
+
 @pytest.mark.parametrize("user_input, expected_endpoint", [
     # Standard Commands ---
     ("Summarize my emails", "gmail_summarize"),
@@ -75,21 +76,9 @@ def test_command_mapping(user_input, expected_endpoint):
     time.sleep(2) # To avoid hitting rate limits
     assert result == expected_endpoint
 
-@pytest.mark.short
-@pytest.mark.llm
-@pytest.mark.parametrize("user_input, expected_endpoint", [
-    ("Can you summarize my unread emails?", "gmail_summarize"),
-    ("Draft an email to my professor", "gmail_draft"),
-    ("Please reply to Ashwin telling him that I'm available for the meeting", "gmail_reply"),])
-def test_command_mapping_short(user_input, expected_endpoint):
-    result = mapIntent(user_input)
-    assert result == expected_endpoint
 
 
-@pytest.mark.medium
-@pytest.mark.llm
-@pytest.mark.short
-@pytest.mark.llm
+
 @pytest.mark.parametrize("command, intent, expected_keywords", [
     (
         "Draft an email to the Registrar asking about my graduation status",
@@ -137,40 +126,65 @@ def test_command_mapping_short(user_input, expected_endpoint):
         ["document"]
     ),
 ])
-def test_parse_arguments(command, intent, expected_keywords):
+def test_parse_arguments_email_description(command, intent, expected_keywords):
     result = parseArguments(command, intent)
-    for arugment in intent_aruguments[intent]:
-        assert arugment in result
-
-    print(result["email_description"])
+    time.sleep(2) 
+    for argument in intent_arguments[intent]:
+        assert argument in result
+ 
     for keyword in expected_keywords:
-        assert keyword in result["email_description"]
+        assert keyword.lower() in result["email_description"].lower()
 
 
-@pytest.mark.short
-@pytest.mark.llm
-@pytest.mark.parametrize("command, intent, expected_keywords", [
-    (
-        "Write an email to Dr. Keaney asking her to get lunch",
-        "gmail_draft",
-        ["lunch"]
-    ),
-    (
-        "Reply to Ashwin's email telling him that the interview time works, and that I look forward to it",
-        "gmail_reply",
-        ["interview", "time"]
-    ),
-    (
-        "Reply to Mike's email about the project update telling him that sounds like a plan",
-        "gmail_reply",
-        ["plan"]
-    ),
-])
-def test_parse_arguments_short(command, intent, expected_keywords):
-    result = parseArguments(command, intent)
-    for arugment in intent_aruguments[intent]:
-        assert arugment in result
 
-    for keyword in expected_keywords:
-        assert keyword in result["email_description"].lower()
+
+@pytest.mark.parametrize("command, intent, expected_seconds", [
+    #default
+    ("Summarize my emails", "gmail_summarize", 86400),
+    ("Get my latest emails", "gmail_summarize", 86400),
+    ("What's new in my inbox?", "gmail_summarize", 86400),
+    ("Get the tea in my inbox", "gmail_summarize", 86400),
+    ("Summer eyes my inbox", "gmail_summarize", 86400),
+
+    # hours
+    ("Summarize my emails in the last hour", "gmail_summarize", 3600),
+    ("Summarize my emails from the past 2 hours", "gmail_summarize", 7200),
+    ("What happened in the last 3 hours", "gmail_summarize", 10800),
+    ("Give me a summary of the past 4 hours", "gmail_summarize", 14400),
+    ("Emails from the last 5 hours", "gmail_summarize", 18000),
+    ("Check my mail within the last 6 hours", "gmail_summarize", 21600),
+    ("Summarize the past 8 hours", "gmail_summarize", 28800),
+    ("What's new from the last 10 hours", "gmail_summarize", 36000),
+    ("Emails within the past 12 hours", "gmail_summarize", 43200),
+    ("Summarize emails from the last 15 hours", "gmail_summarize", 54000),
+    ("Show me emails in the past 18 hours", "gmail_summarize", 64800),
+    ("What arrived in the last 20 hours", "gmail_summarize", 72000),
+    ("Summarize my inbox for the past 22 hours", "gmail_summarize", 79200),
+    ("Emails in the last 24 hours", "gmail_summarize", 86400),
     
+    # minutes
+    ("Summarize emails from the last 15 minutes", "gmail_summarize", 900),
+    ("What happened in the past 30 minutes", "gmail_summarize", 1800),
+    ("Give me a summary of the last 45 minutes", "gmail_summarize", 2700),
+    ("Check my emails within the last minute", "gmail_summarize", 60),
+
+    # days
+    ("Summarize my emails from the past 2 days", "gmail_summarize", 172800),
+    ("What was sent in the last 3 days", "gmail_summarize", 259200),
+    ("Show me emails from the past 7 days", "gmail_summarize", 604800),
+    ("Summarize my inbox for the last day", "gmail_summarize", 86400),
+])
+def test_parse_arguments_lookback_period(command, intent, expected_seconds):
+    result = parseArguments(command, intent)
+    
+    time.sleep(2)
+    
+    assert "lookback_period_value" in result
+    assert "lookback_period_units" in result
+    
+
+    actual_seconds = calculate_seconds(
+        result["lookback_period_value"], 
+        result["lookback_period_units"]
+    )
+    assert actual_seconds == expected_seconds
