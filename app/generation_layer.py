@@ -30,7 +30,6 @@ def summarize_emails(email_content):
                     "STRICT RULES: No lists, no special characters, no transaction IDs, no links, and NO announcement of the summary. "
                     "Use only words meant to be spoken aloud. "
                     "Avoid run-on sentences."
-                    "Example: 'The Dean invited you to a social this Friday, and your Amazon package has arrived.'"
                 ),
             },
             {
