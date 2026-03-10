@@ -23,21 +23,26 @@ def summarize_emails(email_content):
             {
                 "role": "system",
                 "content": (
-                    "You are a minimalist voice assistant briefing a student. "
-                    "Provide a single, fluid paragraph containing all updates (Less than 100 words). "
-                    "CRITICAL: Use conjunctions like 'while', 'and', or 'also' to link different emails into a natural spoken flow. "
-                    "Avoid choppy, short sentences. Get straight to the news without a preamble. "
-                    "STRICT RULES: No lists, no special characters, no transaction IDs, no links, and NO announcement of the summary. "
-                    "Use only words meant to be spoken aloud. "
-                    "Avoid run-on sentences."
+                    "You are a minimalist voice assistant. "
+                    "START IMMEDIATELY with the first piece of news. "
+                    "CRITICAL: Do not include ANY introductory phrases, greetings, or meta-talk (e.g., 'Here is your summary', 'You have...', 'Regarding your emails'). "
+                    "Provide a single, fluid paragraph under 80 words. "
+                    "Use conjunctions like 'while', 'and', or 'also' to link updates into a natural spoken flow. "
+                    "Avoid short, choppy sentences and run-on sentences. "
+                    "STRICT RULES: No lists, no special characters, no transaction IDs, and no links. "
+                    "ONLY output the final spoken text. No preambles, no headers, no announcements."
                 ),
             },
             {
                 "role": "user",
-                "content": f"Summarize these emails into one smooth spoken update:\n\n{email_content}"
+                "content": (
+                    f"Emails:\n{email_content}\n\n"
+                    "Task: Summarize into one smooth spoken paragraph. "
+                    "DO NOT use a preamble. START IMMEDIATELY with the information."
+                )
             }
         ],
-        "temperature": 0.3, # Slight increase from 0.0 helps the model find better "flow" words
+        "temperature": 0.2, # Slightly lower to reduce the chance of 'creative' intros
     }
 
     response = requests.post(GROQ_API_URL, headers=headers, json=data)
@@ -66,20 +71,23 @@ def generate_draft(recipient_name: str, email_description: str) -> str:
             {
                 "role": "system",
                 "content": (
-                    "You are a professional writing assistant for a student. "
-                    "Do no include any preamble annoucing the draft at all. Start the response with a greeting or the body text directly. "
-                    "Your task is to write a clear, polite, and concise email body. "
-                    "STRICT RULES: Do not include a subject line. Do not include a preamble like 'Certainly!' or 'Here is your draft'. "
-                    "DO NOT use placeholders like '[Your Name]'. Use a natural, friendly tone."
-                    "Do not sign the email with a name."
+                    "You are a professional student writing assistant. "
+                    "Output ONLY the text of the email. "
+                    "STRICT RULES:\n"
+                    "1. NO PREAMBLE: Start directly with 'Hi [Name],' or 'Dear [Name],'.\n"
+                    "2. NO SUBJECT LINE: Do not include a subject line or 'Subject:' header.\n"
+                    "3. NO PLACEHOLDERS: Never use brackets like '[Your Name]' or '[Date]'. \n"
+                    "4. SIGN-OFF: End the email with a professional sign-off like 'Best,' or 'Thanks,' but DO NOT include a name after it.\n"
+                    "5. FORMATTING: Use clear paragraph breaks (\\n\\n).\n"
+                    "6. TONE: Maintain a polite, student-to-professor or student-to-peer balance."
                 )
             },
             {
                 "role": "user",
-                "content": f"Write an email to {recipient_name}. The core message is: {email_description}."
+                "content": f"Recipient: {recipient_name}\nMessage: {email_description}"
             }
         ],
-        "temperature": 0.7,
+        "temperature": 0.5, # Lowered slightly for more consistent professional tone
         "max_tokens": 500
     }
 
@@ -116,31 +124,31 @@ def generate_reply(thread_body: str, recipient_name: str, reply_description: str
             {
                 "role": "system",
                 "content": (
-                    "You are a professional writing assistant for a student. "
-                    "Your task is to write a polite and concise email reply based on a provided thread. "
-                    "STRICT RULES: \n"
-                    "1. No preamble (e.g., 'Here is your reply'). Start with the greeting.\n"
-                    "2. Do not include a subject line.\n"
-                    "3. DO NOT use placeholders like '[Your Name]'.\n"
-                    "4. Do not sign the email with a name.\n"
-                    "5. Ensure the tone matches the previous thread but prioritize the user's specific reply instructions."
+                    "You are a professional student writing assistant specialized in email replies. "
+                    "Output ONLY the text of the reply email. "
+                    "STRICT RULES:\n"
+                    "1. NO PREAMBLE: Start immediately with the greeting (e.g., 'Hi [Name],' or 'Dear [Name],').\n"
+                    "2. NO SUBJECT: Do not include a subject line or 'Re:' header.\n"
+                    "3. NO PLACEHOLDERS: Never use brackets like '[Your Name]'. \n"
+                    "4. SIGN-OFF: End with 'Best,' 'Thanks,' or a similar polite closing, but leave the name blank.\n"
+                    "5. CONTEXT AWARENESS: Use the 'Previous Thread' only to determine the appropriate formality (Professor vs. Peer). \n"
+                    "6. FOCUS: Your primary goal is to execute the 'REPLY INTENT' accurately. Do not repeat what was already said in the thread."
                 )
             },
             {
                 "role": "user",
                 "content": (
-                    f"--- PREVIOUS THREAD CONTEXT ---\n{thread_body}\n\n"
-                    f"--- REPLY INSTRUCTIONS ---\n"
+                    f"--- PREVIOUS THREAD ---\n{thread_body}\n\n" # Truncated to save tokens
+                    f"--- REPLY INTENT ---\n"
                     f"Recipient: {recipient_name}\n"
-                    f"My Intent: {reply_description}\n\n"
-                    f"Write the reply now:"
+                    f"What I want to say: {reply_description}\n\n"
+                    "Write the reply email now:"
                 )
             }
         ],
-        "temperature": 0.7,
+        "temperature": 0.4, # Lowered for more precise instruction following
         "max_tokens": 600
     }
-
     try:
         response = requests.post(GROQ_API_URL, headers=headers, json=data)
 

@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from matplotlib.patheffects import Normal
 from app.intent_reasoning import mapIntent, parseArguments
 from app.gmail_services import get_unread, upsert_draft, upsert_reply
 from app.generation_layer import summarize_emails, generate_draft, generate_reply
@@ -147,18 +148,33 @@ def executeCommand(intent: str, arguments: dict, access_token = ACCESS_TOKEN) ->
 
 
 
-# Demo
-## Normal Intent
+#Demo Spring 2
+"""Phonetically Challenging Intent"""
+#print(mapIntent("Summer eyes my unread em ales"))
+
+""""Time Argument Parsing for Summarization"""
+#print(parseArguments("Summarize my unread emails from the last 3 days", "gmail_summarize"))
+
+"""Reply to Email"""
+print(executeCommand("gmail_reply", {"reply_recipient_name": "Connor", "email_description": "telling him that I'll be able to make the lunch meeting on Friday"}))
+
+#Sign up Page
+#What's Next? 
+
+
+
+# Demo Sprint 1
+""" Normal Intent Reasoning"""
 #print(mapIntent("Summarize my unread emails"))
 
-## More Complex Intent
+""" More Complex Intent Reasoning""" 
 #print(mapIntent("Get the tea from my inbox"))
 
-## Argument Parsing
+"""" Argument Parsing """
 #print(parseArguments("Draft an email to Professor Smith asking about the upcoming assignment", "gmail_draft"))
 
-## Summarize Emails
+""" Summarize Emails"""
 #print(summarize_emails(get_unread()))
 
-## Draft Email
+""" Draft Email """
 #print(executeCommand("gmail_summarize", {"lookback_period_units": "days", "lookback_period_value": 1}))

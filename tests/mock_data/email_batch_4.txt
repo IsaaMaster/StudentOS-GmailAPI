@@ -1,0 +1,22 @@
+From: Canvas Notifications <notifications@instructure.com> 
+Date: Mon, Feb 9, 2026 at 8:00 AM 
+Subject: Assignment Graded: Homework 4 - Dynamic Programming 
+To: Isaac Song 
+
+Your assignment "Homework 4 - Dynamic Programming" for CS-120 has been graded.
+Grade: 92/100
+Instructor Comment: Great implementation of the memoization table. You lost a few points on the space complexity analysis in part B. Come to office hours if you want to review.
+---
+---------- Forwarded message --------- 
+From: Dr. Alan Turing <aturing@westmont.edu> 
+Date: Mon, Feb 9, 2026 at 10:15 AM 
+Subject: URGENT: Class Cancelled Today 
+To: CS-340-01 Computer Architecture 
+
+Hi everyone,
+
+I woke up with a severe migraine this morning and will unfortunately have to cancel today's 11:30 AM lecture. Please use this time to continue working on your CPU pipeline simulators. I am extending the deadline for the simulator milestone to Friday at midnight. 
+
+Best,
+Dr. Turing
+---

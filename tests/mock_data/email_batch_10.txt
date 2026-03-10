@@ -1,0 +1,26 @@
+
+From: Westmont IT Helpdesk <ithelp@westmont.edu> 
+Date: Sun, Feb 15, 2026 at 10:00 AM 
+Subject: Mandatory Password Expiration Warning 
+To: Isaac Song 
+
+This is an automated notification from the Westmont College Information Technology department. 
+
+Your network password will expire in 3 days. To maintain access to Canvas, your student email, and the campus WiFi, please visit the password portal at my.westmont.edu and reset your password immediately. 
+
+Remember: IT will never ask for your password via email.
+---
+From: GitHub <noreply@github.com> 
+Date: Sun, Feb 15, 2026 at 11:30 AM 
+Subject: [Westmont-CS/StudentOS-GmailAPI] Run failed: Pytest CI Workflow 
+To: Isaac Song 
+
+Run failed for master (commit 8a9b2c)
+Repository: Westmont-CS/StudentOS-GmailAPI
+Workflow: Pytest CI Workflow
+
+1 error occurred during the build:
+- tests/generation_test.py::test_summarize_emails failed. AssertionError: Summary score too low: 1
+
+View the full logs on GitHub to debug the failing test cases.
+---

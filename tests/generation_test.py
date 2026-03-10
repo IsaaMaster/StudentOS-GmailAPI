@@ -14,12 +14,19 @@ TESTING_MODEL = os.getenv("VALIDATION_MODEL")
     ("email_batch_1"),
     ("email_batch_2"),
     ("email_batch_3"),
+    ("email_batch_4"),
+    ("email_batch_5"),
+    ("email_batch_6"),
+    ("email_batch_7"),
+    ("email_batch_8"),
+    ("email_batch_9"),
+    ("email_batch_10")
 ])
 def test_summarize_emails(email_batch):
     with open(f"tests/mock_data/{email_batch}.txt", "r") as f:
         email_content = f.read()
         summary = summarize_emails(email_content)
-        print(f"Summary for {email_batch}:\n{summary}\n")
+        # print(summary)
 
     headers = {"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"}   
     data = {
@@ -35,8 +42,8 @@ def test_summarize_emails(email_batch):
                     "- 10: Perfect. Fluid, single paragraph, < 150 words, no preamble, no special characters, no run-ons."
                     "- 8: High Quality. Adheres to all content rules but the 'flow' or conjunction usage could be smoother."
                     "- 6: Passable. Meets word count and avoids forbidden items, but includes a preamble or feels slightly choppy."
-                    "- 3: Sub-par. Would very very hard to Alexa to read. Contains prohibited items (links, IDs, special characters) or uses a list/bullet points."
-                    "- 1: Total Failure. Over 150 words, uses lists, contains links, or includes significant non-spoken text."
+                    "- 3: Sub-par. Would very very hard to Alexa to read. Contains prohibited items (links, IDs, special characters)."
+                    "- 1: Total Failure. Over 150 words, uses lists, contains links, AND includes significant non-spoken text."
 
                     "### AUTOMATIC DEDUCTIONS (Mandatory -1 points each):"
                     "1. Preamble inclusion (e.g., 'Here are your emails' or 'I found 3 messages')."
@@ -58,8 +65,10 @@ def test_summarize_emails(email_batch):
     response = requests.post(GROQ_API_URL, headers=headers, json=data)
     assert response.status_code == 200
     score = int(response.json()['choices'][0]['message']['content'].strip())
-    assert score >= 6, f"Summary score too low: {score}"
     time.sleep(5)
+    assert score >= 6, f"Summary score too low: {score}"
+    print(score)
+
 
 
 
@@ -70,6 +79,7 @@ def test_summarize_emails(email_batch):
 ])
 def test_generate_draft(recipient, description):
     draft = generate_draft(recipient, description)
+
 
     headers = {"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"}   
     data = {
@@ -88,7 +98,7 @@ def test_generate_draft(recipient, description):
                     "- 8: High Quality. Adheres to all content rules but could be slightly clearer or more polite."
                     "- 6: Passable. Meets basic requirements but includes a subject line or preamble."
                     "- 3: Sub-par. Lacks clarity, is impolite, or uses an unnatural tone."
-                    "- 1: Total Failure. Includes a subject line, preamble, or uses placeholders like '[Your Name]'."       
+                    "- 1: Total Failure. Includes a subject line, preamble, and misspelled words."       
                 
                     "### AUTOMATIC DEDUCTIONS (Mandatory -1 points each):"
                     "1. Subject line inclusion."
@@ -112,6 +122,7 @@ def test_generate_draft(recipient, description):
     score = int(response.json()['choices'][0]['message']['content'].strip())
     assert score >= 6, f"Draft score too low: {score}" 
     time.sleep(5) 
+    print(score)
 
 
 
@@ -144,7 +155,7 @@ def test_generate_reply(email, recipient, description):
                     "- 8: High Quality. Adheres to all content rules but could be slightly clearer or more polite."
                     "- 6: Passable. Meets basic requirements but includes a subject line or preamble."
                     "- 3: Sub-par. Lacks clarity, is impolite, or uses an unnatural tone."
-                    "- 1: Total Failure. Includes a subject line, preamble, or uses placeholders like '[Your Name]'."       
+                    "- 1: Total Failure. Includes a subject line, preamble, and misspelled words."       
                 
                     "### AUTOMATIC DEDUCTIONS (Mandatory -1 points each):"
                     "1. Subject line inclusion."
@@ -169,4 +180,5 @@ def test_generate_reply(email, recipient, description):
     score = int(response.json()['choices'][0]['message']['content'].strip())
     assert score >= 6, f"Reply score too low: {score}"
     time.sleep(5)
+    print(score)
     

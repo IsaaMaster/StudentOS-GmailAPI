@@ -1,0 +1,28 @@
+From: Handshake <handshake@notifications.joinhandshake.com> 
+Date: Tue, Feb 10, 2026 at 9:02 AM 
+Subject: 3 new software engineering jobs match your profile 
+To: Isaac Song 
+
+Hi Isaac,
+Based on your major and skills, we found 3 new roles you might be interested in:
+1. Junior Backend Developer at Procore Technologies (Carpinteria, CA)
+2. Data Analyst Intern at Yardi Systems (Santa Barbara, CA)
+3. IT Support Specialist at Westmont College (On-Campus)
+
+Apply before the deadlines close next week! Click here to view your dashboard.
+---
+From: Sarah Jenkins <sjenkins@procore.com> 
+Date: Tue, Feb 10, 2026 at 2:45 PM 
+Subject: Interview Invitation: Junior Backend Developer 
+To: Isaac Song 
+
+Hi Isaac,
+
+Thank you for applying to the Junior Backend Developer position at Procore. Our team was impressed by your resume, specifically your work with the Gmail API and LLM integrations. 
+
+We would love to schedule a 30-minute introductory phone screen with you sometime this Thursday or Friday. Please let me know what times work best for your class schedule.
+
+Best,
+Sarah Jenkins
+Technical Recruiter, Procore Technologies
+---

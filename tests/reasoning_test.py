@@ -35,6 +35,22 @@ intent_arguments = {
     ("Somare eyes my mess ages", "gmail_summarize"),
     ("Send them new em ale to my Mom about the weekend", "gmail_draft"),
     ("Reply to Ashwin's email telling him the thyme works", "gmail_reply"),
+    ("Summer eyes me em ales", "gmail_summarize"),
+    ("Right a knew em ales to Dad about this weak end", "gmail_draft"),
+    ("Beef me on mine inbox", "gmail_summarize"), # "Brief me on my inbox"
+    ("Catch me upon my e-mules", "gmail_summarize"), # "Catch me up on my emails"
+    ("Check my male from the last our", "gmail_summarize"), # "Check my mail from the last hour"
+    ("Reed my gnu mass edges", "gmail_summarize"), # "Read my new messages"
+    ("Give me the guest of my male", "gmail_summarize"), # "Give me the gist of my mail"
+    ("What's the lay test in my in blocks", "gmail_summarize"), # "What's the latest in my inbox"
+    ("Giraffe a new massage to profess or smyth", "gmail_draft"), # "Draft a message to Professor Smith"
+    ("Come pose an e-nail to David", "gmail_draft"), # "Compose an email to David"
+    ("Shoe to note to Emma about the raw ject", "gmail_draft"), # "Shoot a note to Emma about the project"
+    ("Send anew emile to the dean", "gmail_draft"), # "Send a new email to the dean"
+    ("Reason pond to the shred from Sarah", "gmail_reply"), # "Respond to the thread from Sarah"
+    ("Hit reap lie end tell him aisle bee weight", "gmail_reply"), # "Hit reply and tell him I'll be late"
+    ("Send a respond to the last mass edge", "gmail_reply"), # "Send a response to the last message"
+    ("Right back to David and say yes", "gmail_reply"), # "Write back to David and say yes"
 
     # Slang/Casual Language
     ("Respond to current thread with yes", "gmail_reply"),

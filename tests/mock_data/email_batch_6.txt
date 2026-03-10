@@ -1,0 +1,22 @@
+From: David Oyebade <doyebade@westmont.edu> 
+Date: Thu, Feb 12, 2026 at 4:20 PM 
+Subject: Senior Sem Presentation Slides 
+To: Isaac Song, Emma Clifton 
+
+Hey guys,
+I started the Google Slides for our final presentation next week. I blocked out the sections we talked about. Isaac, can you drop the system architecture diagrams into slides 4 and 5 tonight so I can format them? 
+
+Also, are we still meeting at the library at 7 PM tomorrow to practice?
+- David
+---
+---------- Forwarded message --------- 
+From: Google Drive <drive-shares-noreply@google.com> 
+Date: Thu, Feb 12, 2026 at 4:22 PM 
+Subject: David Oyebade shared a presentation with you 
+To: Isaac Song 
+
+David Oyebade (doyebade@westmont.edu) has invited you to edit the following presentation:
+"Senior Seminar Final Presentation - API Team"
+
+Open in Slides: [Link]
+---

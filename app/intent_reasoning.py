@@ -139,4 +139,3 @@ def parseArguments(command : str, intent : str) -> dict:
         raise Exception(f"Error: {response.status_code}, {response.text}")
     
 
-print(parseArguments("get the tea in my inbox", "gmail_summarize"))
