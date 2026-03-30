@@ -80,7 +80,8 @@ def executeCommand(intent: str, arguments: dict, access_token = ACCESS_TOKEN) ->
             logger.info(f"Retrieved {len(emails)} unread emails")
             if len(emails) == 0:
                 logger.info("No unread emails found")
-                return "You have no new unread emails."
+                return f"You have no new unread emails in the last {arguments['lookback_period_value']} {arguments['lookback_period_units']}." 
+        
         except Exception as e:
             logger.error(f"Error retrieving unread emails: {e}", exc_info=True)
             return f"There's a problem with the Gmail server. I couldn't retrieve your emails. Please try again later."
@@ -150,13 +151,13 @@ def executeCommand(intent: str, arguments: dict, access_token = ACCESS_TOKEN) ->
 
 #Demo Spring 2
 """Phonetically Challenging Intent"""
-#print(mapIntent("Summer eyes my unread em ales"))
+#print(executeCommand("gmail_summarize", {"lookback_period_units": "hours", "lookback_period_value": 12}))
 
 """"Time Argument Parsing for Summarization"""
 #print(parseArguments("Summarize my unread emails from the last 3 days", "gmail_summarize"))
 
 """Reply to Email"""
-print(executeCommand("gmail_reply", {"reply_recipient_name": "Connor", "email_description": "telling him that I'll be able to make the lunch meeting on Friday"}))
+#print(executeCommand("gmail_reply", {"reply_recipient_name": "Connor", "email_description": "telling him that I'll be able to make the lunch meeting on Friday"}))
 
 #Sign up Page
 #What's Next? 
