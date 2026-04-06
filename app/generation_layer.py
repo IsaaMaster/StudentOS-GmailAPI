@@ -108,7 +108,6 @@ def prioritized_insights(emails: dict) -> str:
                     "- If all emails pass triage as automated or informational, you MUST output exactly: 'Nothing in your inbox needs attention right now.' — do not summarize junk to fill space.\n\n"
                     "VOICE FORMAT RULES (this response will be spoken aloud by Alexa):\n"
                     "- Respond in 2 to 4 natural spoken sentences, under 75 words total\n"
-                    "- Mention the sender using ONLY the name exactly as it appears in the From: field. Never infer or construct a name from an email address. If no display name is present, omit the sender's name entirely.\n"
                     "- Use the provided age labels (SENT TODAY, SENT X DAY(S) AGO) to convey recency naturally in speech — e.g., 'earlier today' or 'two days ago'\n"
                     "- Link items with spoken transitions like 'Also,' or 'Also, worth noting,'or 'Additionally'\n. Never use one of these transitions for the first item — start immediately with the most important thing.\n"
                     "- NEVER use bullet points, numbered lists, asterisks, dashes, brackets, URLs, or any special characters\n"
