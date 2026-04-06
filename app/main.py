@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 from matplotlib.patheffects import Normal
 from app.intent_reasoning import mapIntent, parseArguments
-from app.gmail_services import get_unread, upsert_draft, upsert_reply
-from app.generation_layer import summarize_emails, generate_draft, generate_reply
+from app.gmail_services import get_unread, get_user_first_name, upsert_draft, upsert_reply, get_emails
+from app.generation_layer import summarize_emails, generate_draft, generate_reply, prioritized_insights
 from app.gmail_reasoning import find_reply_match
 from app.utils import calculate_seconds
 import os
@@ -47,7 +47,7 @@ def read_root(command: str, authorization: str = Header(None)):
         logger.info(f"Mapped intent: {intent}")
     except Exception as e:
         logger.error(f"Error mapping intent: {e}", exc_info=True)
-        return "There's a problem with the server. Please try again later."
+        return "Sorry, I'm having trouble reaching the server. Please try again later."
 
     if intent == "none":
         logger.info("Intent classified as 'none'")
@@ -68,35 +68,31 @@ def read_root(command: str, authorization: str = Header(None)):
         return result
     except Exception as e:
         logger.error(f"Unhandled error in executeCommand for intent {intent}: {e}", exc_info=True)
-        return "There's a problem with the server. Please try again later."   
+        return "Sorry, I'm having trouble reaching the server. Please try again later."   
 
 
 def executeCommand(intent: str, arguments: dict, access_token = ACCESS_TOKEN) -> str:
     if intent == "gmail_summarize":
         logger.info("Executing gmail_summarize")
         try:
-            hours_back = calculate_seconds(arguments["lookback_period_value"], arguments["lookback_period_units"])/3600 if "lookback_period_units" in arguments and "lookback_period_value" in arguments else 24
-            emails = get_unread(hours_back=hours_back, access_token=access_token)
-            logger.info(f"Retrieved {len(emails)} unread emails")
+            hours_back = calculate_seconds(arguments["lookback_period_value"], arguments["lookback_period_units"])/3600 if "lookback_period_units" in arguments and "lookback_period_value" in arguments else 12
+            emails = get_emails(hours_back=hours_back, access_token=access_token)
+            logger.info(f"Retrieved {len(emails)} emails")
             if len(emails) == 0:
                 logger.info("No unread emails found")
-                return f"You have no new unread emails in the last {arguments['lookback_period_value']} {arguments['lookback_period_units']}." 
+                return f"Sorry, I couldn't find any emails from the last {arguments['lookback_period_value']} {arguments['lookback_period_units']}." 
         
         except Exception as e:
             logger.error(f"Error retrieving unread emails: {e}", exc_info=True)
             return f"There's a problem with the Gmail server. I couldn't retrieve your emails. Please try again later."
 
         try:
-            aggregated_emails = ""
-            for email in emails.values():
-                aggregated_emails += email["from"] + ": " + email['body'] + "\n---\n"
-            logger.debug(f"Aggregated {len(emails)} emails")
-            summary = summarize_emails(aggregated_emails)
+            summary = prioritized_insights(emails)
             logger.info("Email summary generated successfully")
             return summary
         except Exception as e:
             logger.error(f"Error summarizing emails: {e}", exc_info=True)
-            return "There's a problem with the server. Please try again later."
+            return "Sorry, I'm having trouble reaching the server. Please try again later."
 
     elif intent == "gmail_draft":
         logger.info(f"Executing gmail_draft with arguments: {arguments}")
@@ -110,10 +106,10 @@ def executeCommand(intent: str, arguments: dict, access_token = ACCESS_TOKEN) ->
                 return "Draft created successfully."
             else:
                 logger.error(f"Failed to upsert draft: {result}")
-                return "I was unable to create the draft. Please try again later."
+                return "Sorry, I was unable to create the draft. Please try again later."
         except Exception as e:
             logger.error(f"Error in gmail_draft: {e}", exc_info=True)
-            return "I was unable to create the draft. Please try again later."
+            return "Sorry, I was unable to create the draft. Please try again later."
 
     elif intent == "gmail_reply":
         logger.info(f"Executing gmail_reply with arguments: {arguments}")
@@ -142,10 +138,10 @@ def executeCommand(intent: str, arguments: dict, access_token = ACCESS_TOKEN) ->
                 return "Reply created successfully."
             else:
                 logger.error(f"Failed to upsert reply: {result}")
-                return "I was unable to create the reply. Please try again later."
+                return "Sorry, I was unable to create the reply. Please try again later."
         except Exception as e:
             logger.error(f"Error in gmail_reply: {e}", exc_info=True)
-            return "I was unable to create the reply. Please try again later."
+            return "Sorry, I was unable to create the reply. Please try again later."
 
 
 
@@ -178,4 +174,4 @@ def executeCommand(intent: str, arguments: dict, access_token = ACCESS_TOKEN) ->
 #print(summarize_emails(get_unread()))
 
 """ Draft Email """
-#print(executeCommand("gmail_summarize", {"lookback_period_units": "days", "lookback_period_value": 1}))
+print(executeCommand("gmail_summarize", {"lookback_period_units": "days", "lookback_period_value": 15}))

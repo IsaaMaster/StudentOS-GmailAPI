@@ -16,6 +16,57 @@ ACCESS_TOKEN = os.getenv("GMAIL_ACCESS_TOKEN")
 GROQ_API_URL = os.getenv("GROQ_API_URL")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
+import requests
+
+def get_user_first_name(access_token: str) -> str:
+    response = requests.get(
+        "https://www.googleapis.com/oauth2/v3/userinfo",
+        headers={"Authorization": f"Bearer {access_token}"}
+    )
+    response.raise_for_status()
+    return response.json().get("given_name")
+
+
+def get_emails(hours_back=24, max_results=15, access_token = ACCESS_TOKEN) -> str:
+    logger.info(f"Fetching unread emails from last {hours_back} hours (max {max_results} results)")
+    try:
+        creds = Credentials(access_token)
+
+        service = build('gmail', 'v1', credentials=creds)
+
+        after_ts = int((datetime.now() - timedelta(hours=hours_back)).timestamp())
+        query = f"label:INBOX category:primary after:{after_ts}"
+
+        results = service.users().messages().list(userId='me', q=query, maxResults=max_results).execute()
+        messages = results.get('messages', [])
+
+        if not messages:
+            logger.info(f"No unread emails found from last {hours_back} hours")
+            return {}
+
+        logger.info(f"Found {len(messages)} unread messages, fetching full details")
+        emails = {}
+        for msg in messages:
+            m = service.users().messages().get(userId='me', id=msg['id'], format='full').execute()
+            payload = m.get('payload', {})
+            headers = m.get('payload', {}).get('headers', [])
+
+            # Clean and Truncate logic applied here
+            body = get_email_body(payload)
+            body = clean_emails(body)
+            from_header = next((h['value'] for h in headers if h['name'] == 'From'), "Unknown Sender")
+            from_email = email.utils.parseaddr(from_header)[1]
+            subject = next((h['value'] for h in headers if h['name'] == 'Subject'), "No Subject")
+            rfc_id = next((h['value'] for h in headers if h['name'] == 'Message-ID'), None)
+            date = next((h['value'] for h in headers if h['name'] == 'Date'), None)
+            emails[msg['id']] = {'from': from_header, 'from-email': from_email, 'date': date, 'subject': subject, 'body': body, 'rfc-id': rfc_id}
+
+        logger.info(f"Successfully retrieved {len(emails)} email details")
+        return emails
+    except Exception as e:
+        logger.error(f"Error fetching unread emails: {e}", exc_info=True)
+        raise
+
 
 
 def get_unread(hours_back=24, max_results=3, access_token = ACCESS_TOKEN) -> str:
