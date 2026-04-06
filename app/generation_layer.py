@@ -85,33 +85,17 @@ def prioritized_insights(emails: dict) -> str:
             {
                 "role": "system",
                 "content": (
-                    "You are a spoken inbox assistant. Triage the emails below and deliver a voice briefing of the main points. \n\n"
-                    "<triage>\n"
-                    "INCLUDE: Emails from real people (professors, classmates, colleagues, friends, family) with deadlines, action requests, meeting changes, urgent decisions, or other important matters.\n"
-                    "SKIP: Newsletters, promotions, automated notifications (shipping, order confirmations, GitHub, Jira, app alerts), and marketing.\n"
-                    "</triage>\n\n"
-                    "<grounding>\n"
-                    "- Every fact you state must be explicitly present in the provided email data. Never infer, guess, or invent details.\n"
-                    "</grounding>\n\n"
-                    "<temporal>\n"
-                    "- Emails tagged [TEMPORAL WARNING] describe past events — treat the warning as ground truth and skip any events they describe as 'today', 'tonight', or 'tomorrow'.\n"
-                    "- Never echo relative time words from email bodies. Convert to concrete dates or use the provided age labels naturally (e.g., 'earlier today', 'two days ago').\n"
-                    "</temporal>\n\n"
-                    "<output>\n"
-                    "- 2–4 natural spoken sentences, under 75 words total.\n"
-                    "- Start immediately with the highest-priority item. No preamble, greeting, or meta-commentary.\n"
-                    "- Connect multiple items with 'Also,' or 'Also, worth noting,' — never as the opening transition.\n"
-                    "- No lists, bullet points, special characters, brackets, or URLs.\n"
-                    "Output ONLY the spoken text.\n"
-                    "</output>"
+                    "You are a spoken inbox assistant. Summarize the emails below and deliver a voice briefing of the main points in a single paragraph that can be easily read by Alexa. Be friendly and well-spoken. \n\n"
+                    "Keep it brief and concise and professional. Keep it under 80 words. Don't get into the details too much."
+                    "Don't tell the user what to do. "
                 ),
             },
             {
                 "role": "user",
-                "content": f"Today is {today}.\n\n{formatted_emails}"
+                "content": f"{formatted_emails}"
             }
         ],
-        "temperature": 0.5,
+        "temperature": 0.0,
     }
 
 
@@ -129,12 +113,10 @@ def prioritized_insights(emails: dict) -> str:
     response = requests.post(GROQ_API_URL, headers=headers, json=data)
     if response.status_code == 200:
         result = response.json()['choices'][0]['message']['content'].strip()
-        if "nothing" in result.lower() and "attention" in result.lower():
-            return result
 
-        full_result = preamble[random.randint(0, len(preamble)-1)] + " " + result.strip() + " " + epilogue[random.randint(0, len(epilogue)-1)]
-        logger.info("Prioritized insights generated successfully")
-        return full_result
+        #full_result = preamble[random.randint(0, len(preamble)-1)] + " " + result.strip() + " " + epilogue[random.randint(0, len(epilogue)-1)]
+        #logger.info("Prioritized insights generated successfully")
+        return result
     else:
         logger.error(f"GROQ API error: {response.status_code} - {response.text}")
         return "Sorry, I had trouble checking your inbox."
