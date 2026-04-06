@@ -112,7 +112,7 @@ def parseArguments(command : str, intent : str) -> dict:
                     "   - Always use the plural form: 'minutes', 'hours', or 'days'.\n"
                     "4. RECIPIENT_NAME: Extract the person or entity. Strip lead-in words like 'to' or 'send to'.\n"
                     "5. EMAIL_DESCRIPTION: Keep exact phrasing of the message. Do not summarize or change perspective.\n"
-                    "6. EMPTY VALUES: Use '' for missing text. IMPORTANT: Default lookback_period_value to 24 and units to 'hours' if unspecified.\n"
+                    "6. EMPTY VALUES: Use '' for missing text. IMPORTANT: Default lookback_period_value to 12 and units to 'hours' if unspecified.\n"
                     "7. OUTPUT: Return ONLY valid JSON. No preamble, no markdown."
                 )
             },
