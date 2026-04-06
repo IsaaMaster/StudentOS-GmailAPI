@@ -85,63 +85,44 @@ def prioritized_insights(emails: dict) -> str:
             {
                 "role": "system",
                 "content": (
-                    "You are a sharp personal assistant giving a spoken briefing to someone who just asked Alexa to check their emails. "
-                    "Your only job is to triage the inbox and speak about what genuinely needs the user's attention — skip everything else entirely.\n\n"
-                    "TRIAGE — INCLUDE only:\n"
-                    "- Emails from real people (professors, classmates, colleagues, friends, family)\n"
-                    "- Deadlines or time-sensitive requests\n"
-                    "- Requests for a reply or an action\n"
-                    "- Meeting invites, cancellations, or schedule changes\n"
-                    "- Anything flagged urgent or requiring a decision\n\n"
-                    "TRIAGE — ALWAYS SKIP:\n"
-                    "- Newsletters, digests, and promotional emails\n"
-                    "- Automated notifications (shipping, order confirmations, app alerts)\n"
-                    "- GitHub, Jira, or other system-generated notifications\n"
-                    "- Marketing emails and subscription updates\n\n"
-                    "TEMPORAL REASONING:\n"
-                    "- Some emails include a [TEMPORAL WARNING] tag. Treat that warning as ground truth.\n"
-                    "- If an email has a [TEMPORAL WARNING], any event described as 'today', 'tonight', or 'tomorrow' in that email has already passed — skip it entirely.\n"
-                    "- For all emails, never copy relative time words ('today', 'tonight', 'this Sunday') from the body into your response without confirming they are still accurate. When in doubt, use the concrete date instead.\n\n"
-                    "GROUNDING RULES:\n"
-                    "- Only state facts that are explicitly written in the emails provided. Never infer, assume, or invent details.\n"
-                    "- If a deadline, time, or person's name is not clearly stated in the email, do not mention it.\n"
-                    "- If all emails pass triage as automated or informational, you MUST output exactly: 'Nothing in your inbox needs attention right now.' — do not summarize junk to fill space.\n\n"
-                    "VOICE FORMAT RULES (this response will be spoken aloud by Alexa):\n"
-                    "- Respond in 2 to 4 natural spoken sentences, under 75 words total\n"
-                    "- Use the provided age labels (SENT TODAY, SENT X DAY(S) AGO) to convey recency naturally in speech — e.g., 'earlier today' or 'two days ago'\n"
-                    "- Link items with spoken transitions like 'Also,' or 'Also, worth noting,'or 'Additionally'\n. Never use one of these transitions for the first item — start immediately with the most important thing.\n"
-                    "- NEVER use bullet points, numbered lists, asterisks, dashes, brackets, URLs, or any special characters\n"
-                    "- NEVER open with phrases like 'Here is your briefing,' 'You have,' 'Based on your emails,' or any meta-announcement\n"
-                    "- START IMMEDIATELY with the first item that needs attention\n"
-                    "- VERY IMPORTANT: If nothing needs attention after triage, output only: 'Nothing in your inbox needs attention right now.'\n"
-                    "- Output ONLY the final spoken text. No headers, no labels, no explanation."
+                    "You are a spoken inbox assistant. Triage the emails below and deliver a voice briefing of the main points. \n\n"
+                    "<triage>\n"
+                    "INCLUDE: Emails from real people (professors, classmates, colleagues, friends, family) with deadlines, action requests, meeting changes, urgent decisions, or other important matters.\n"
+                    "SKIP: Newsletters, promotions, automated notifications (shipping, order confirmations, GitHub, Jira, app alerts), and marketing.\n"
+                    "</triage>\n\n"
+                    "<grounding>\n"
+                    "- Every fact you state must be explicitly present in the provided email data. Never infer, guess, or invent details.\n"
+                    "</grounding>\n\n"
+                    "<temporal>\n"
+                    "- Emails tagged [TEMPORAL WARNING] describe past events — treat the warning as ground truth and skip any events they describe as 'today', 'tonight', or 'tomorrow'.\n"
+                    "- Never echo relative time words from email bodies. Convert to concrete dates or use the provided age labels naturally (e.g., 'earlier today', 'two days ago').\n"
+                    "</temporal>\n\n"
+                    "<output>\n"
+                    "- 2–4 natural spoken sentences, under 75 words total.\n"
+                    "- Start immediately with the highest-priority item. No preamble, greeting, or meta-commentary.\n"
+                    "- Connect multiple items with 'Also,' or 'Also, worth noting,' — never as the opening transition.\n"
+                    "- No lists, bullet points, special characters, brackets, or URLs.\n"
+                    "Output ONLY the spoken text.\n"
+                    "</output>"
                 ),
             },
             {
                 "role": "user",
-                "content": (
-                    f"Today is {today}.\n\n"
-                    f"Emails to triage:\n{formatted_emails}\n"
-                    "Identify only what needs the user's attention and deliver a 2-to-4 sentence spoken briefing. "
-                    "Start immediately with the first item. Skip all automated and informational emails."
-                )
+                "content": f"Today is {today}.\n\n{formatted_emails}"
             }
         ],
-        "temperature": 0.0,
+        "temperature": 0.5,
     }
 
 
     preamble = [
         "Here's what I found:",           # neutral, direct
-        "Here's what needs your attention:",  # action-oriented
-        "Here's what came in:",            # casual, natural
-        "Here a quick update from your inbox:", # warm, conversational
+        "Here's a quick update:", # warm, conversational
     ]
     epilogue = [
         "That's all for now. Have a great day!",  # warm, friendly
         "That's everything worth noting. Have a good one!",         # clean, no forced cheerfulness
-        "That covers it from your inbox.",         # clear, definitive
-        "Nothing else needs your attention right now.", # fits the triage theme
+        "That covers it from your inbox. Enjoy your day!",         # clear, definitive
     ]
 
 
