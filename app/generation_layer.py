@@ -102,19 +102,19 @@ def prioritized_insights(emails: dict) -> str:
                     "- Some emails include a [TEMPORAL WARNING] tag. Treat that warning as ground truth.\n"
                     "- If an email has a [TEMPORAL WARNING], any event described as 'today', 'tonight', or 'tomorrow' in that email has already passed — skip it entirely.\n"
                     "- For all emails, never copy relative time words ('today', 'tonight', 'this Sunday') from the body into your response without confirming they are still accurate. When in doubt, use the concrete date instead.\n\n"
-                    "GROUNDING RULES (anti-hallucination):\n"
+                    "GROUNDING RULES:\n"
                     "- Only state facts that are explicitly written in the emails provided. Never infer, assume, or invent details.\n"
                     "- If a deadline, time, or person's name is not clearly stated in the email, do not mention it.\n"
                     "- If all emails pass triage as automated or informational, you MUST output exactly: 'Nothing in your inbox needs attention right now.' — do not summarize junk to fill space.\n\n"
                     "VOICE FORMAT RULES (this response will be spoken aloud by Alexa):\n"
                     "- Respond in 2 to 4 natural spoken sentences, under 75 words total\n"
-                    "- Mention the sender by name and make urgency feel natural\n"
+                    "- Mention the sender using ONLY the name exactly as it appears in the From: field. Never infer or construct a name from an email address. If no display name is present, omit the sender's name entirely.\n"
                     "- Use the provided age labels (SENT TODAY, SENT X DAY(S) AGO) to convey recency naturally in speech — e.g., 'earlier today' or 'two days ago'\n"
                     "- Link items with spoken transitions like 'Also,' or 'Also, worth noting,'or 'Additionally'\n. Never use one of these transitions for the first item — start immediately with the most important thing.\n"
                     "- NEVER use bullet points, numbered lists, asterisks, dashes, brackets, URLs, or any special characters\n"
                     "- NEVER open with phrases like 'Here is your briefing,' 'You have,' 'Based on your emails,' or any meta-announcement\n"
                     "- START IMMEDIATELY with the first item that needs attention\n"
-                    "- If nothing needs attention after triage, output only: 'Nothing in your inbox needs attention right now.'\n"
+                    "- VERY IMPORTANT: If nothing needs attention after triage, output only: 'Nothing in your inbox needs attention right now.'\n"
                     "- Output ONLY the final spoken text. No headers, no labels, no explanation."
                 ),
             },
@@ -128,7 +128,7 @@ def prioritized_insights(emails: dict) -> str:
                 )
             }
         ],
-        "temperature": 0.1,
+        "temperature": 0.0,
     }
 
 
@@ -145,9 +145,13 @@ def prioritized_insights(emails: dict) -> str:
         "Nothing else needs your attention right now.", # fits the triage theme
     ]
 
+
     response = requests.post(GROQ_API_URL, headers=headers, json=data)
     if response.status_code == 200:
         result = response.json()['choices'][0]['message']['content'].strip()
+        if "nothing" in result.lower() and "attention" in result.lower():
+            return result
+
         full_result = preamble[random.randint(0, len(preamble)-1)] + " " + result.strip() + " " + epilogue[random.randint(0, len(epilogue)-1)]
         logger.info("Prioritized insights generated successfully")
         return full_result
