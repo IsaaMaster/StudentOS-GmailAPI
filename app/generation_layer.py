@@ -121,6 +121,154 @@ def prioritized_insights(emails: dict) -> str:
         logger.error(f"GROQ API error: {response.status_code} - {response.text}")
         return "Sorry, I had trouble checking your inbox."
 
+def summarize_sender_emails(emails: dict, sender_name: str) -> str:
+    """
+    Given a batch of recent emails and a loosely-specified sender name,
+    uses the LLM to fuzzy-match the sender and summarize what they said.
+
+    The LLM handles cases where the user's phrasing ("my advisor", "mom",
+    "Professor Kim") doesn't exactly match the From header ("Kimberly Johnson
+    <k.johnson@ucsb.edu>"). If no emails match, it returns a graceful fallback.
+
+    Args:
+        emails: Recent emails dict from get_emails(), keyed by Gmail message ID.
+        sender_name: The sender as described by the user (may be informal or partial).
+
+    Returns:
+        A voice-ready string summarizing what the sender wrote, or a fallback
+        if no matching emails are found.
+    """
+    if not emails:
+        logger.info("No emails passed to summarize_sender_emails")
+        return f"I didn't find any recent emails from {sender_name}."
+
+    formatted_emails = ""
+    for i, email_data in enumerate(emails.values(), 1):
+        formatted_emails += (
+            f"[Email {i}]\n"
+            f"From: {email_data['from']}\n"
+            f"Subject: {email_data['subject']}\n"
+            f"Body: {email_data['body']}\n"
+            f"---\n"
+        )
+
+    logger.info(f"Calling GROQ API to find emails from '{sender_name}' across {len(emails)} emails")
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "model": GENERATION_MODEL,
+        "messages": [
+            {
+                "role": "system",
+                "content": (
+                    "You are a voice assistant that checks a user's inbox for emails from a specific person or organization. "
+                    "The user will give you a sender name that may be informal, partial, or a nickname "
+                    "(e.g. 'mom', 'Professor Kim', 'the financial aid office', 'my advisor'). "
+                    "Use common sense to match it against the actual From headers in the emails.\n\n"
+                    "RULES:\n"
+                    "1. MATCHING: Match loosely — 'Professor Kim' can match 'Kimberly Johnson', "
+                    "'mom' can match a personal name, 'the registrar' can match a university email address.\n"
+                    "2. IF MATCH FOUND: Respond with a single spoken sentence or two summarizing what they said. "
+                    "Example: 'Yes, Professor Johnson emailed you yesterday about the midterm. She said the exam has been moved to Friday.'\n"
+                    "3. IF NO MATCH: Respond with exactly: "
+                    f"'I didn't find any recent emails from {sender_name}.'\n"
+                    "4. Keep it under 50 words. Output ONLY the spoken response, no preamble."
+                ),
+            },
+            {
+                "role": "user",
+                "content": (
+                    f"Who I'm looking for: '{sender_name}'\n\n"
+                    f"Recent emails:\n{formatted_emails}"
+                )
+            }
+        ],
+        "temperature": 0.0,
+    }
+
+    response = requests.post(GROQ_API_URL, headers=headers, json=data)
+    if response.status_code == 200:
+        result = response.json()['choices'][0]['message']['content'].strip()
+        logger.info(f"Sender email summary generated successfully for '{sender_name}'")
+        return result
+    else:
+        logger.error(f"GROQ API error: {response.status_code} - {response.text}")
+        return f"Sorry, I had trouble checking your emails for messages from {sender_name}."
+
+
+def extract_verification_code(emails: dict) -> str:
+    """
+    Scans a batch of recent emails and extracts the most recent verification
+    code, OTP, or one-time password for Alexa to read aloud.
+
+    Args:
+        emails: Dict of recent emails from get_recent_all_emails(), keyed by
+                Gmail message ID. Each value contains: from, subject, body.
+
+    Returns:
+        A voice-ready string with the code (e.g. "Your verification code from
+        Google is 4 8 3 2 1 9."), or a graceful fallback if none is found.
+    """
+    if not emails:
+        logger.info("No emails passed to extract_verification_code")
+        return "I couldn't find any recent emails with a verification code."
+
+    formatted_emails = ""
+    for i, email_data in enumerate(emails.values(), 1):
+        formatted_emails += (
+            f"[Email {i}]\n"
+            f"From: {email_data['from']}\n"
+            f"Subject: {email_data['subject']}\n"
+            f"Body: {email_data['body']}\n"
+            f"---\n"
+        )
+
+    logger.info(f"Calling GROQ API to extract verification code from {len(emails)} emails")
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "model": GENERATION_MODEL,
+        "messages": [
+            {
+                "role": "system",
+                "content": (
+                    "You are a voice assistant that finds verification codes in emails. "
+                    "Search the provided emails for a verification code, OTP, one-time password, "
+                    "confirmation code, or security code.\n\n"
+                    "RULES:\n"
+                    "1. Find the most relevant code (typically 4-8 digits, but may be alphanumeric).\n"
+                    "2. Respond with a single spoken sentence like: "
+                    "'Your verification code from [Sender] is [digits spoken with spaces between each digit].'\n"
+                    "   Example: 'Your verification code from Google is 4 8 3 2 1 9.'\n"
+                    "3. Insert a space between every digit/character so Alexa reads them individually.\n"
+                    "4. If multiple codes are found, use the one from the most recent or most relevant email.\n"
+                    "5. If no verification code is found in any email, respond with exactly: "
+                    "'I couldn't find a verification code in your recent emails.'\n"
+                    "6. Output ONLY the spoken sentence. No preamble, no extra text."
+                ),
+            },
+            {
+                "role": "user",
+                "content": formatted_emails
+            }
+        ],
+        "temperature": 0.0,
+    }
+
+    response = requests.post(GROQ_API_URL, headers=headers, json=data)
+    if response.status_code == 200:
+        result = response.json()['choices'][0]['message']['content'].strip()
+        logger.info("Verification code extracted successfully")
+        return result
+    else:
+        logger.error(f"GROQ API error: {response.status_code} - {response.text}")
+        return "Sorry, I had trouble checking your emails for a verification code."
+
+
 def summarize_emails(email_content):
     if not email_content or "no unread emails" in email_content:
         logger.info("No unread emails to summarize")

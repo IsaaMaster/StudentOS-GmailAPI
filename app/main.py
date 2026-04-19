@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 from matplotlib.patheffects import Normal
 from app.intent_reasoning import mapIntent, parseArguments
-from app.gmail_services import get_unread, get_user_first_name, upsert_draft, upsert_reply, get_emails
-from app.generation_layer import summarize_emails, generate_draft, generate_reply, prioritized_insights
+from app.gmail_services import get_unread, get_user_first_name, upsert_draft, upsert_reply, get_emails, get_recent_all_emails
+from app.generation_layer import summarize_emails, generate_draft, generate_reply, prioritized_insights, extract_verification_code, summarize_sender_emails
 from app.gmail_reasoning import find_reply_match
 from app.utils import calculate_seconds
 import os
@@ -27,7 +27,9 @@ app = FastAPI(title="StudentOS API")
 intent_arguments = {
     "gmail_summarize": ["lookback_period_units", "lookback_period_value"],
     "gmail_draft": ["recipient_name", "email_description"],
-    "gmail_reply": ["reply_recipient_name", "email_description"]}
+    "gmail_reply": ["reply_recipient_name", "email_description"],
+    "gmail_verification_code": [],
+    "gmail_check_sender": ["sender_name"]}
 
 
 from fastapi import Header, HTTPException
@@ -111,6 +113,43 @@ def executeCommand(intent: str, arguments: dict, access_token = ACCESS_TOKEN) ->
             logger.error(f"Error in gmail_draft: {e}", exc_info=True)
             return "Sorry, I was unable to create the draft. Please try again later."
 
+    elif intent == "gmail_check_sender":
+        logger.info(f"Executing gmail_check_sender with arguments: {arguments}")
+        sender_name = arguments.get("sender_name", "")
+        if not sender_name:
+            return "I didn't catch who you're looking for. Please try again."
+        try:
+            emails = get_emails(hours_back=72, max_results=15, body_max_length=800, access_token=access_token)
+            logger.info(f"Retrieved {len(emails)} emails for sender check")
+        except Exception as e:
+            logger.error(f"Error retrieving emails for sender check: {e}", exc_info=True)
+            return "There's a problem with the Gmail server. I couldn't retrieve your emails. Please try again later."
+
+        try:
+            result = summarize_sender_emails(emails, sender_name)
+            logger.info(f"Sender check completed for '{sender_name}'")
+            return result
+        except Exception as e:
+            logger.error(f"Error summarizing sender emails: {e}", exc_info=True)
+            return f"Sorry, I had trouble checking your emails. Please try again."
+
+    elif intent == "gmail_verification_code":
+        logger.info("Executing gmail_verification_code")
+        try:
+            emails = get_recent_all_emails(minutes_back=10, access_token=access_token)
+            logger.info(f"Retrieved {len(emails)} recent emails for verification code search")
+        except Exception as e:
+            logger.error(f"Error retrieving recent emails: {e}", exc_info=True)
+            return "There's a problem with the Gmail server. I couldn't retrieve your emails. Please try again later."
+
+        try:
+            result = extract_verification_code(emails)
+            logger.info("Verification code extraction completed")
+            return result
+        except Exception as e:
+            logger.error(f"Error extracting verification code: {e}", exc_info=True)
+            return "Sorry, I had trouble finding your verification code. Please try again."
+
     elif intent == "gmail_reply":
         logger.info(f"Executing gmail_reply with arguments: {arguments}")
         try:
@@ -121,15 +160,21 @@ def executeCommand(intent: str, arguments: dict, access_token = ACCESS_TOKEN) ->
             return f"There's a problem with the Gmail server. I couldn't retrieve your emails. Please try again later."
 
         try:
-            best_match_id = find_reply_match(emails, arguments['reply_recipient_name'], arguments['email_description'])
+            # Pass a compact version to find_reply_match — full bodies aren't needed to identify
+            # the right thread. A short snippet covers the disambiguation case where the same
+            # sender has multiple emails with similar subjects.
+            compact_emails = {
+                msg_id: {'from': data['from'], 'subject': data['subject'], 'snippet': data['body'][:200]}
+                for msg_id, data in emails.items()
+            }
+            best_match_id = find_reply_match(compact_emails, arguments['reply_recipient_name'], arguments['email_description'])
             logger.debug(f"Found best match email ID: {best_match_id}")
 
             if best_match_id == 'none':
                 logger.info("No suitable email found for reply")
                 return "I couldn't find a matching email to reply to. Please try again."
 
-       
-            reply = generate_reply(emails[best_match_id], arguments['reply_recipient_name'], arguments['email_description'])
+            reply = generate_reply(emails[best_match_id]['body'], arguments['reply_recipient_name'], arguments['email_description'])
             logger.debug(f"Generated reply to {arguments['reply_recipient_name']}: {reply}")
 
             success, result = upsert_reply(reply, best_match_id, rfc_id=emails[best_match_id]['rfc-id'], subject=emails[best_match_id]['subject'], to_email=emails[best_match_id]['from-email'], access_token=access_token)
@@ -174,4 +219,5 @@ def executeCommand(intent: str, arguments: dict, access_token = ACCESS_TOKEN) ->
 #print(summarize_emails(get_unread()))
 
 """ Draft Email """
-print(executeCommand("gmail_summarize", {"lookback_period_units": "days", "lookback_period_value": 15}))
+#print(executeCommand("gmail_summarize", {"lookback_period_units": "days", "lookback_period_value": 15}))
+print(executeCommand("gmail_verification_code", {}))

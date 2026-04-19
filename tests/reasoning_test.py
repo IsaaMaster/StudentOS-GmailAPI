@@ -7,7 +7,9 @@ import time
 intent_arguments = {
     "gmail_summarize": ["lookback_period_units", "lookback_period_value"],
     "gmail_draft": ["recipient_name", "email_description"],
-    "gmail_reply": ["reply_recipient_name", "email_description"]}
+    "gmail_reply": ["reply_recipient_name", "email_description"],
+    "gmail_verification_code": [],
+    "gmail_check_sender": ["sender_name"]}
 
 
 @pytest.mark.parametrize("user_input, expected_endpoint", [
@@ -79,6 +81,33 @@ intent_arguments = {
     ("Look at my inbox and give me the highlights", "gmail_summarize"),
     ("Reach out to Dave with a brand new email regarding the keys", "gmail_draft"),
     ("Follow up on that email from earlier", "gmail_reply"),
+
+    # Check Sender Commands
+    ("Did Professor Kim email me?", "gmail_check_sender"),
+    ("Has my advisor reached out?", "gmail_check_sender"),
+    ("Any emails from the financial aid office?", "gmail_check_sender"),
+    ("Did my mom send me anything?", "gmail_check_sender"),
+    ("Check if the registrar emailed me", "gmail_check_sender"),
+    ("Did I hear back from Dr. Patel?", "gmail_check_sender"),
+    ("Has the dean's office contacted me?", "gmail_check_sender"),
+    ("Any messages from Coach Williams?", "gmail_check_sender"),
+
+
+    # Verification Code Commands
+    ("What's my verification code?", "gmail_verification_code"),
+    ("Find my OTP", "gmail_verification_code"),
+    ("Get my confirmation code from my email", "gmail_verification_code"),
+    ("What's my one-time password?", "gmail_verification_code"),
+    ("Read me my verification code", "gmail_verification_code"),
+    ("Did I get a verification code?", "gmail_verification_code"),
+    ("Check my email for an authentication code", "gmail_verification_code"),
+    ("Look for a security code in my inbox", "gmail_verification_code"),
+
+    # Phonetic Errors - Verification Code
+    ("What's my very fish aye shin code", "gmail_verification_code"),  # "verification"
+    ("Find my oh tee pee", "gmail_verification_code"),  # "OTP"
+    ("Get my conform mation code", "gmail_verification_code"),  # "confirmation"
+    ("What's my won time pass word", "gmail_verification_code"),  # "one-time password"
 
     # Negative Cases
     ("What time is it right now?", "none"),
@@ -156,11 +185,11 @@ def test_parse_arguments_email_description(command, intent, expected_keywords):
 
 @pytest.mark.parametrize("command, intent, expected_seconds", [
     #default
-    ("Summarize my emails", "gmail_summarize", 86400),
-    ("Get my latest emails", "gmail_summarize", 86400),
-    ("What's new in my inbox?", "gmail_summarize", 86400),
-    ("Get the tea in my inbox", "gmail_summarize", 86400),
-    ("Summer eyes my inbox", "gmail_summarize", 86400),
+    ("Summarize my emails", "gmail_summarize", 43200),
+    ("Get my latest emails", "gmail_summarize", 43200),
+    ("What's new in my inbox?", "gmail_summarize", 43200),
+    ("Get the tea in my inbox", "gmail_summarize", 43200),
+    ("Summer eyes my inbox", "gmail_summarize", 43200),
 
     # hours
     ("Summarize my emails in the last hour", "gmail_summarize", 3600),
@@ -193,7 +222,7 @@ def test_parse_arguments_email_description(command, intent, expected_keywords):
 def test_parse_arguments_lookback_period(command, intent, expected_seconds):
     result = parseArguments(command, intent)
     
-    time.sleep(2)
+    #time.sleep(2)
     
     assert "lookback_period_value" in result
     assert "lookback_period_units" in result

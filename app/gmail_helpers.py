@@ -15,7 +15,7 @@ def get_email_body(payload):
         return base64.urlsafe_b64decode(data).decode('utf-8') if data else ""
     return ""
 
-def clean_emails(email_body):
+def clean_emails(email_body, max_length=2000):
     # 1. TRUNCATE QUOTED TEXT
     # This regex looks for common "On [Date], [Name] wrote:" patterns
     # It also handles the Spanish "El [Date] escribió:" found in your logs
@@ -34,13 +34,13 @@ def clean_emails(email_body):
             email_body = email_body[:match.start()]
             break
 
-    # 2. STANDARD CLEANING 
+    # 2. STANDARD CLEANING
     email_body = re.sub(r'\s+', ' ', email_body).strip()  # Remove excessive whitespace
     for link_pattern in [r'http\S+', r'www\.\S+']:
         email_body = re.sub(link_pattern, '', email_body)
-    email_body = re.sub(r'\S+@\S+', '', email_body) 
+    email_body = re.sub(r'\S+@\S+', '', email_body)
 
-    if len(email_body) > 2000:
-        email_body = email_body[:2000] + " ... [truncated]"
-    
+    if len(email_body) > max_length:
+        email_body = email_body[:max_length] + " ... [truncated]"
+
     return email_body
