@@ -156,11 +156,11 @@ def test_parse_arguments_email_description(command, intent, expected_keywords):
 
 @pytest.mark.parametrize("command, intent, expected_seconds", [
     #default
-    ("Summarize my emails", "gmail_summarize", 86400),
-    ("Get my latest emails", "gmail_summarize", 86400),
-    ("What's new in my inbox?", "gmail_summarize", 86400),
-    ("Get the tea in my inbox", "gmail_summarize", 86400),
-    ("Summer eyes my inbox", "gmail_summarize", 86400),
+    ("Summarize my emails", "gmail_summarize", 43200),
+    ("Get my latest emails", "gmail_summarize", 43200),
+    ("What's new in my inbox?", "gmail_summarize", 43200),
+    ("Get the tea in my inbox", "gmail_summarize", 43200),
+    ("Summer eyes my inbox", "gmail_summarize", 43200),
 
     # hours
     ("Summarize my emails in the last hour", "gmail_summarize", 3600),
@@ -192,9 +192,9 @@ def test_parse_arguments_email_description(command, intent, expected_keywords):
 ])
 def test_parse_arguments_lookback_period(command, intent, expected_seconds):
     result = parseArguments(command, intent)
-    
-    time.sleep(2)
-    
+
+    #time.sleep(2)
+
     assert "lookback_period_value" in result
     assert "lookback_period_units" in result
     

@@ -121,15 +121,21 @@ def executeCommand(intent: str, arguments: dict, access_token = ACCESS_TOKEN) ->
             return f"There's a problem with the Gmail server. I couldn't retrieve your emails. Please try again later."
 
         try:
-            best_match_id = find_reply_match(emails, arguments['reply_recipient_name'], arguments['email_description'])
+            # Pass a compact version to find_reply_match — full bodies aren't needed to identify
+            # the right thread. A short snippet covers the disambiguation case where the same
+            # sender has multiple emails with similar subjects.
+            compact_emails = {
+                msg_id: {'from': data['from'], 'subject': data['subject'], 'snippet': data['body'][:200]}
+                for msg_id, data in emails.items()
+            }
+            best_match_id = find_reply_match(compact_emails, arguments['reply_recipient_name'], arguments['email_description'])
             logger.debug(f"Found best match email ID: {best_match_id}")
 
             if best_match_id == 'none':
                 logger.info("No suitable email found for reply")
                 return "I couldn't find a matching email to reply to. Please try again."
 
-       
-            reply = generate_reply(emails[best_match_id], arguments['reply_recipient_name'], arguments['email_description'])
+            reply = generate_reply(emails[best_match_id]['body'], arguments['reply_recipient_name'], arguments['email_description'])
             logger.debug(f"Generated reply to {arguments['reply_recipient_name']}: {reply}")
 
             success, result = upsert_reply(reply, best_match_id, rfc_id=emails[best_match_id]['rfc-id'], subject=emails[best_match_id]['subject'], to_email=emails[best_match_id]['from-email'], access_token=access_token)
@@ -174,4 +180,4 @@ def executeCommand(intent: str, arguments: dict, access_token = ACCESS_TOKEN) ->
 #print(summarize_emails(get_unread()))
 
 """ Draft Email """
-print(executeCommand("gmail_summarize", {"lookback_period_units": "days", "lookback_period_value": 15}))
+#print(executeCommand("gmail_summarize", {"lookback_period_units": "days", "lookback_period_value": 15}))

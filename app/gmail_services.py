@@ -27,7 +27,7 @@ def get_user_first_name(access_token: str) -> str:
     return response.json().get("given_name")
 
 
-def get_emails(hours_back=24, max_results=15, access_token = ACCESS_TOKEN) -> str:
+def get_emails(hours_back=24, max_results=15, body_max_length=2000, access_token=ACCESS_TOKEN) -> dict:
     logger.info(f"Fetching unread emails from last {hours_back} hours (max {max_results} results)")
     try:
         creds = Credentials(access_token)
@@ -51,9 +51,8 @@ def get_emails(hours_back=24, max_results=15, access_token = ACCESS_TOKEN) -> st
             payload = m.get('payload', {})
             headers = m.get('payload', {}).get('headers', [])
 
-            # Clean and Truncate logic applied here
             body = get_email_body(payload)
-            body = clean_emails(body)
+            body = clean_emails(body, max_length=body_max_length)
             from_header = next((h['value'] for h in headers if h['name'] == 'From'), "Unknown Sender")
             from_email = email.utils.parseaddr(from_header)[1]
             subject = next((h['value'] for h in headers if h['name'] == 'Subject'), "No Subject")
