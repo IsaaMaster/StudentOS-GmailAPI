@@ -221,9 +221,9 @@ def test_parse_arguments_email_description(command, intent, expected_keywords):
 ])
 def test_parse_arguments_lookback_period(command, intent, expected_seconds):
     result = parseArguments(command, intent)
-    
+
     #time.sleep(2)
-    
+
     assert "lookback_period_value" in result
     assert "lookback_period_units" in result
     
