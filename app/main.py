@@ -219,7 +219,10 @@ def executeCommand(intent: str, arguments: dict, access_token = ACCESS_TOKEN) ->
 #print(summarize_emails(get_unread()))
 
 """ Draft Email """
-print(executeCommand("gmail_draft", {"recipient_name": "Dr. Keaney", "email_description": "asking her if she wants to get lunch at the DC this Friday"}))
+#print(executeCommand("gmail_draft", {"recipient_name": "Dr. Keaney", "email_description": "asking her if she wants to get lunch at the DC this Friday"}))
 
 """ Reply to Email """
 #print(executeCommand("gmail_summarize", {"lookback_period_units": "hours", "lookback_period_value": 48}))
+
+""" Extract Verification Code """
+print(executeCommand("gmail_verification_code", {}))       
