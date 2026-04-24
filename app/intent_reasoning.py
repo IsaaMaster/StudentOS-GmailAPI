@@ -13,13 +13,16 @@ intent_descriptions = {
     "gmail_summarize": "Summarize unread Emails",
     "gmail_draft": "Draft an Email in a completely new email chain",
     "gmail_reply": "Reply to Email in a current email chain",
+    "gmail_verification_code": "Find a verification code, OTP, or one-time password sent to the user's email",
+    "gmail_check_sender": "Check if a specific person or organization has sent the user an email recently",
     "none": "Select this if none of the other actions are applicable"
 }
 
 intent_arguments = {
     "gmail_summarize": ["lookback_period_units", "lookback_period_value"],
     "gmail_draft": ["recipient_name", "email_description"],
-    "gmail_reply": ["reply_recipient_name", "email_description"]}
+    "gmail_reply": ["reply_recipient_name", "email_description"],
+    "gmail_check_sender": ["sender_name"]}
 
 def mapIntent(command: str, intent_descriptions = intent_descriptions) -> str:
     """
@@ -45,7 +48,7 @@ def mapIntent(command: str, intent_descriptions = intent_descriptions) -> str:
                     "You are a command classifier for a student voice assistant. "
                     "Your task is to output EXACTLY one of the provided action keys and NOTHING else. "
                     "Do not include conversational text, do not include quotes, and do not explain your reasoning."
-                    "Watch out for phenetic errors like 'summer eyes' which actually means 'summarize', or 'read play' which actually means 'reply'." 
+                    "Watch out for phenetic errors like 'summer eyes' which actually means 'summarize', or 'read play' which actually means 'reply'."
                 )
             },
             {
