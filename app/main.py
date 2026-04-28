@@ -1,11 +1,16 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Header, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from matplotlib.patheffects import Normal
 from app.intent_reasoning import mapIntent, parseArguments
 from app.gmail_services import get_unread, get_user_first_name, upsert_draft, upsert_reply, get_emails, get_recent_all_emails
 from app.generation_layer import summarize_emails, generate_draft, generate_reply, prioritized_insights, extract_verification_code, summarize_sender_emails
 from app.gmail_reasoning import find_reply_match
+from app.demo_data import MOCK_EMAILS
 from app.utils import calculate_seconds
+from collections import defaultdict
+from pydantic import BaseModel
 import os
+import time
 from dotenv import load_dotenv
 import logging
 
@@ -23,6 +28,14 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="StudentOS API")
 
+CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*").split(",")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=CORS_ORIGINS,
+    allow_methods=["GET", "POST"],
+    allow_headers=["*"],
+)
+
 
 intent_arguments = {
     "gmail_summarize": ["lookback_period_units", "lookback_period_value"],
@@ -31,8 +44,6 @@ intent_arguments = {
     "gmail_verification_code": [],
     "gmail_check_sender": ["sender_name"]}
 
-
-from fastapi import Header, HTTPException
 
 @app.get("/gmail/{command}")
 def read_root(command: str, authorization: str = Header(None)):
@@ -188,6 +199,135 @@ def executeCommand(intent: str, arguments: dict, access_token = ACCESS_TOKEN) ->
             logger.error(f"Error in gmail_reply: {e}", exc_info=True)
             return "Sorry, I was unable to create the reply. Please try again later."
 
+
+
+# ── Demo endpoints ───────────────────────────────────────────────────────────
+# Public, no auth. Uses MOCK_EMAILS instead of Gmail API so every
+# generation function works unchanged — only the data source differs.
+
+_demo_rate: dict[str, list[float]] = defaultdict(list)
+_DEMO_LIMIT = 10  # requests per IP per hour
+
+
+class DemoChatRequest(BaseModel):
+    command: str
+
+
+@app.get("/demo/seed")
+def demo_seed():
+    """Returns frontend-safe mock inbox (strips internal rfc-id field)."""
+    return {
+        "emails": [
+            {
+                "id":         eid,
+                "from":       data["from"],
+                "from_email": data["from-email"],
+                "date":       data["date"],
+                "subject":    data["subject"],
+                "body":       data["body"],
+                "snippet":    data["snippet"],
+            }
+            for eid, data in MOCK_EMAILS.items()
+        ]
+    }
+
+
+@app.post("/demo/chat")
+def demo_chat(req: DemoChatRequest, request: Request):
+    ip  = request.client.host
+    now = time.time()
+    _demo_rate[ip] = [t for t in _demo_rate[ip] if now - t < 3600]
+    if len(_demo_rate[ip]) >= _DEMO_LIMIT:
+        return {"response": "Demo limit reached — please try again in an hour.", "mutation": None}
+    _demo_rate[ip].append(now)
+
+    command = req.command.strip()
+    if not command:
+        return {"response": "Please type a command to try.", "mutation": None}
+
+    try:
+        intent = mapIntent(command)
+        logger.info(f"Demo intent: {intent}")
+    except Exception as e:
+        logger.error(f"Demo intent mapping failed: {e}", exc_info=True)
+        return {"response": "Sorry, I'm having trouble right now. Please try again.", "mutation": None}
+
+    if intent == "none":
+        return {
+            "response": (
+                "Sorry, I couldn't understand that. "
+                "Try: 'Summarize my emails', 'Draft an email to Professor Chen', or 'What's my verification code?'"
+            ),
+            "mutation": None,
+        }
+
+    try:
+        args = parseArguments(command, intent) if intent in intent_arguments else {}
+        logger.info(f"Demo args: {args}")
+    except Exception as e:
+        logger.error(f"Demo argument parsing failed: {e}", exc_info=True)
+        return {"response": "I had trouble parsing that request. Please try again.", "mutation": None}
+
+    try:
+        if intent == "gmail_summarize":
+            return {"response": prioritized_insights(MOCK_EMAILS), "mutation": None}
+
+        elif intent == "gmail_check_sender":
+            sender = args.get("sender_name", "")
+            return {"response": summarize_sender_emails(MOCK_EMAILS, sender), "mutation": None}
+
+        elif intent == "gmail_verification_code":
+            return {"response": extract_verification_code(MOCK_EMAILS), "mutation": None}
+
+        elif intent == "gmail_draft":
+            recipient   = args.get("recipient_name", "")
+            description = args.get("email_description", "")
+            body        = generate_draft(recipient, description)
+            draft = {
+                "id":        f"d_{int(time.time())}",
+                "to":        recipient,
+                "subject":   _demo_infer_subject(recipient),
+                "body":      body,
+                "timestamp": "just now",
+            }
+            return {"response": "Draft created successfully.", "mutation": {"type": "draft_created", "draft": draft}}
+
+        elif intent == "gmail_reply":
+            recipient   = args.get("reply_recipient_name", "")
+            description = args.get("email_description", "")
+            compact = {
+                mid: {"from": d["from"], "subject": d["subject"], "snippet": d["snippet"]}
+                for mid, d in MOCK_EMAILS.items()
+            }
+            match_id = find_reply_match(compact, recipient, description)
+            if match_id == "none" or match_id not in MOCK_EMAILS:
+                return {"response": "I couldn't find a matching email to reply to. Please try again.", "mutation": None}
+            body             = generate_reply(MOCK_EMAILS[match_id]["body"], recipient, description)
+            original_subject = MOCK_EMAILS[match_id]["subject"]
+            subject          = original_subject if original_subject.startswith("Re:") else f"Re: {original_subject}"
+            draft = {
+                "id":        f"d_{int(time.time())}",
+                "to":        recipient,
+                "subject":   subject,
+                "body":      body,
+                "timestamp": "just now",
+            }
+            return {"response": "Reply draft created successfully.", "mutation": {"type": "draft_created", "draft": draft}}
+
+    except Exception as e:
+        logger.error(f"Demo execution failed for intent {intent!r}: {e}", exc_info=True)
+        return {"response": "Sorry, something went wrong. Please try again.", "mutation": None}
+
+    return {"response": "Sorry, I couldn't handle that command.", "mutation": None}
+
+
+def _demo_infer_subject(recipient_name: str) -> str:
+    """Returns the subject of the first mock email whose sender contains the recipient name."""
+    name_lower = recipient_name.lower()
+    for email_data in MOCK_EMAILS.values():
+        if any(part in email_data["from"].lower() for part in name_lower.split() if len(part) > 2):
+            return email_data["subject"]
+    return "New Message"
 
 
 #Demo Spring 2
