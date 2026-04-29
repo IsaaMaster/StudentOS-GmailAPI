@@ -9,6 +9,8 @@ from app.demo_data import MOCK_EMAILS
 from app.utils import calculate_seconds
 from collections import defaultdict
 from pydantic import BaseModel
+from datetime import datetime, timezone, timedelta
+from email.utils import parsedate_to_datetime
 import os
 import time
 from dotenv import load_dotenv
@@ -270,7 +272,17 @@ def demo_chat(req: DemoChatRequest, request: Request):
 
     try:
         if intent == "gmail_summarize":
-            return {"response": prioritized_insights(MOCK_EMAILS), "mutation": None}
+            hours_back = calculate_seconds(
+                args.get("lookback_period_value", 12),
+                args.get("lookback_period_units", "hours")
+            ) / 3600
+            filtered = _demo_filter_emails(MOCK_EMAILS, hours_back)
+            if not filtered:
+                return {
+                    "response": f"I didn't find any emails from the last {args.get('lookback_period_value', 12)} {args.get('lookback_period_units', 'hours')}.",
+                    "mutation": None,
+                }
+            return {"response": prioritized_insights(filtered), "mutation": None}
 
         elif intent == "gmail_check_sender":
             sender = args.get("sender_name", "")
@@ -319,6 +331,14 @@ def demo_chat(req: DemoChatRequest, request: Request):
         return {"response": "Sorry, something went wrong. Please try again.", "mutation": None}
 
     return {"response": "Sorry, I couldn't handle that command.", "mutation": None}
+
+
+def _demo_filter_emails(emails: dict, hours_back: float) -> dict:
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=hours_back)
+    return {
+        mid: data for mid, data in emails.items()
+        if parsedate_to_datetime(data["date"]) >= cutoff
+    }
 
 
 def _demo_infer_subject(recipient_name: str) -> str:

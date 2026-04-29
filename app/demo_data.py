@@ -30,7 +30,7 @@ MOCK_EMAILS = {
     "e2": {
         "from":       "Connor Walsh <connorw@gmail.com>",
         "from-email": "connorw@gmail.com",
-        "date":       _ago(hours=2),
+        "date":       _ago(minutes=20),
         "subject":    "Study session tonight?",
         "body": (
             "Hey! Are you still coming to the study session tonight at the library? "

@@ -191,8 +191,7 @@ def summarize_sender_emails(emails: dict, sender_name: str) -> str:
                     "'mom' can match a personal name, 'the registrar' can match a university email address.\n"
                     "2. IF MATCH FOUND: Respond with a single spoken sentence or two summarizing what they said. "
                     "Example: 'Yes, Professor Johnson emailed you yesterday about the midterm. She said the exam has been moved to Friday.'\n"
-                    "3. IF NO MATCH: Respond with exactly: "
-                    f"'I didn't find any recent emails from {sender_name}.'\n"
+                    "3. IF NO MATCH: Respond with exactly: " f"'I didn't find any recent emails from {sender_name}.'\n"
                     "4. Keep it under 50 words. Output ONLY the spoken response, no preamble."
                 ),
             },
