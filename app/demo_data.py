@@ -64,7 +64,7 @@ MOCK_EMAILS = {
     "e5": {
         "from":       "Amazon <shipment-tracking@amazon.com>",
         "from-email": "shipment-tracking@amazon.com",
-        "offset":     timedelta(hours=36),
+        "offset":     timedelta(hours=20),
         "subject":    "Your order has shipped",
         "body": (
             "Your Amazon order (#113-4829201-8847362) has shipped and is on its way. "
