@@ -1,22 +1,12 @@
-from datetime import datetime, timezone, timedelta
-from email.utils import format_datetime
+from datetime import timedelta
 
-_now = datetime.now(timezone.utc)
-
-def _ago(**kwargs) -> str:
-    """Returns an RFC 2822 date string for a point in the past."""
-    return format_datetime(_now - timedelta(**kwargs))
-
-
-# Ordered most-recent first so /demo/seed returns them in inbox order.
-# Dates are computed relative to server start time so they stay realistic
-# regardless of when the demo is visited.
-
+# Offsets are applied at request time so timestamps are always fresh relative
+# to when the user loads the page — not relative to server start.
 MOCK_EMAILS = {
     "e3": {
         "from":       "Google <no-reply@accounts.google.com>",
         "from-email": "no-reply@accounts.google.com",
-        "date":       _ago(minutes=3),
+        "offset":     timedelta(minutes=3),
         "subject":    "Your Google verification code",
         "body": (
             "Your Google verification code is 847291. "
@@ -30,7 +20,7 @@ MOCK_EMAILS = {
     "e2": {
         "from":       "Connor Walsh <connorw@gmail.com>",
         "from-email": "connorw@gmail.com",
-        "date":       _ago(minutes=20),
+        "offset":     timedelta(minutes=45),
         "subject":    "Study session tonight?",
         "body": (
             "Hey! Are you still coming to the study session tonight at the library? "
@@ -43,7 +33,7 @@ MOCK_EMAILS = {
     "e1": {
         "from":       "Professor David Chen <d.chen@university.edu>",
         "from-email": "d.chen@university.edu",
-        "date":       _ago(hours=4),
+        "offset":     timedelta(hours=4),
         "subject":    "Problem Set 3 Due Friday",
         "body": (
             "Hi everyone,\n\n"
@@ -58,7 +48,7 @@ MOCK_EMAILS = {
     "e4": {
         "from":       "Financial Aid Office <finaid@university.edu>",
         "from-email": "finaid@university.edu",
-        "date":       _ago(hours=24),
+        "offset":     timedelta(hours=24),
         "subject":    "Action Required: Your Aid Package Has Been Updated",
         "body": (
             "Dear Student,\n\n"
@@ -74,7 +64,7 @@ MOCK_EMAILS = {
     "e5": {
         "from":       "Amazon <shipment-tracking@amazon.com>",
         "from-email": "shipment-tracking@amazon.com",
-        "date":       _ago(hours=36),
+        "offset":     timedelta(hours=36),
         "subject":    "Your order has shipped",
         "body": (
             "Your Amazon order (#113-4829201-8847362) has shipped and is on its way. "
@@ -89,7 +79,7 @@ MOCK_EMAILS = {
     "e6": {
         "from":       "Mom <mom@gmail.com>",
         "from-email": "mom@gmail.com",
-        "date":       _ago(hours=48),
+        "offset":     timedelta(hours=48),
         "subject":    "Checking in",
         "body": (
             "Hi honey! Just wanted to check in and see how you're doing with finals coming up. "
@@ -103,7 +93,7 @@ MOCK_EMAILS = {
     "e7": {
         "from":       "CS Club <newsletter@csclub.university.edu>",
         "from-email": "newsletter@csclub.university.edu",
-        "date":       _ago(hours=60),
+        "offset":     timedelta(hours=60),
         "subject":    "CS Club Weekly Digest — Hackathon Recap & Upcoming Events",
         "body": (
             "Welcome to this week's CS Club newsletter!\n\n"

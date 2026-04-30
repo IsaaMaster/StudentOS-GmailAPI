@@ -12,7 +12,7 @@ from contextlib import asynccontextmanager
 from posthog import Posthog, new_context, identify_context
 from pydantic import BaseModel
 from datetime import datetime, timezone, timedelta
-from email.utils import parsedate_to_datetime
+from email.utils import parsedate_to_datetime, format_datetime
 import atexit
 import hashlib
 import os
@@ -246,9 +246,19 @@ class DemoChatRequest(BaseModel):
     command: str
 
 
+def _demo_emails_with_dates() -> dict:
+    """Returns MOCK_EMAILS with 'date' fields computed relative to now."""
+    now = datetime.now(timezone.utc)
+    return {
+        mid: {**data, "date": format_datetime(now - data["offset"])}
+        for mid, data in MOCK_EMAILS.items()
+    }
+
+
 @app.get("/demo/seed")
 def demo_seed():
-    """Returns frontend-safe mock inbox (strips internal rfc-id field)."""
+    """Returns frontend-safe mock inbox with fresh timestamps (strips internal fields)."""
+    emails = _demo_emails_with_dates()
     return {
         "emails": [
             {
@@ -260,7 +270,7 @@ def demo_seed():
                 "body":       data["body"],
                 "snippet":    data["snippet"],
             }
-            for eid, data in MOCK_EMAILS.items()
+            for eid, data in emails.items()
         ]
     }
 
@@ -310,12 +320,14 @@ def demo_chat(req: DemoChatRequest, request: Request):
             return {"response": "I had trouble parsing that request. Please try again.", "mutation": None}
 
         try:
+            live_emails = _demo_emails_with_dates()
+
             if intent == "gmail_summarize":
                 hours_back = calculate_seconds(
                     args.get("lookback_period_value", 12),
                     args.get("lookback_period_units", "hours")
                 ) / 3600
-                filtered = _demo_filter_emails(MOCK_EMAILS, hours_back)
+                filtered = _demo_filter_emails(live_emails, hours_back)
                 if not filtered:
                     return {
                         "response": f"I didn't find any emails from the last {args.get('lookback_period_value', 12)} {args.get('lookback_period_units', 'hours')}.",
@@ -325,10 +337,10 @@ def demo_chat(req: DemoChatRequest, request: Request):
 
             elif intent == "gmail_check_sender":
                 sender = args.get("sender_name", "")
-                return {"response": summarize_sender_emails(MOCK_EMAILS, sender), "mutation": None}
+                return {"response": summarize_sender_emails(live_emails, sender), "mutation": None}
 
             elif intent == "gmail_verification_code":
-                return {"response": extract_verification_code(MOCK_EMAILS), "mutation": None}
+                return {"response": extract_verification_code(live_emails), "mutation": None}
 
             elif intent == "gmail_draft":
                 recipient   = args.get("recipient_name", "")
@@ -349,13 +361,13 @@ def demo_chat(req: DemoChatRequest, request: Request):
                 description = args.get("email_description", "")
                 compact = {
                     mid: {"from": d["from"], "subject": d["subject"], "snippet": d["snippet"]}
-                    for mid, d in MOCK_EMAILS.items()
+                    for mid, d in live_emails.items()
                 }
                 match_id = find_reply_match(compact, recipient, description)
-                if match_id == "none" or match_id not in MOCK_EMAILS:
+                if match_id == "none" or match_id not in live_emails:
                     return {"response": "I couldn't find a matching email to reply to. Please try again.", "mutation": None}
-                body             = generate_reply(MOCK_EMAILS[match_id]["body"], recipient, description)
-                original_subject = MOCK_EMAILS[match_id]["subject"]
+                body             = generate_reply(live_emails[match_id]["body"], recipient, description)
+                original_subject = live_emails[match_id]["subject"]
                 subject          = original_subject if original_subject.startswith("Re:") else f"Re: {original_subject}"
                 draft = {
                     "id":        f"d_{int(time.time())}",
@@ -383,7 +395,6 @@ def _demo_filter_emails(emails: dict, hours_back: float) -> dict:
 
 
 def _demo_infer_subject(recipient_name: str) -> str:
-    """Returns the subject of the first mock email whose sender contains the recipient name."""
     name_lower = recipient_name.lower()
     for email_data in MOCK_EMAILS.values():
         if any(part in email_data["from"].lower() for part in name_lower.split() if len(part) > 2):
