@@ -115,7 +115,9 @@ def parseArguments(command : str, intent : str) -> dict:
                     "   - Always use the plural form: 'minutes', 'hours', or 'days'.\n"
                     "4. RECIPIENT_NAME: Extract the person or entity. Strip lead-in words like 'to' or 'send to'.\n"
                     "5. EMAIL_DESCRIPTION: Keep exact phrasing of the message. Do not summarize or change perspective.\n"
-                    "6. EMPTY VALUES: Use '' for missing text. IMPORTANT: Default lookback_period_value to 12 and units to 'hours' if unspecified.\n"
+                    "6. SENDER_NAME: Extract the person, company, or organization the user is asking about. Strip lead-in phrases like 'from', 'any emails from', 'check for emails from'.\n"
+                    "7. REPLY_RECIPIENT_NAME: Extract the name of the person the user wants to reply to. Strip lead-in phrases like 'to', 'reply to'.\n"
+                    "8. EMPTY VALUES: Use '' for missing text. IMPORTANT: Default lookback_period_value to 12 and units to 'hours' if unspecified.\n"
                     "7. OUTPUT: Return ONLY valid JSON. No preamble, no markdown."
                 )
             },
