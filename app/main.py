@@ -33,7 +33,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 posthog_client = Posthog(
-    api_key=os.getenv("POSTHOG_API_KEY"),
+    project_api_key=os.getenv("POSTHOG_API_KEY"),
     host=os.getenv("POSTHOG_HOST", "https://us.i.posthog.com"),
     enable_exception_autocapture=True,
 )
