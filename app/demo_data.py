@@ -45,6 +45,21 @@ MOCK_EMAILS = {
         "rfc-id":  "<ps3.reminder@university.edu>",
         "snippet": "Reminder: Problem Set 3 is due this Friday at 11:59 PM via Gradescope.",
     },
+    "e5": {
+        "from":       "Amazon <shipment-tracking@amazon.com>",
+        "from-email": "shipment-tracking@amazon.com",
+        "offset":     timedelta(hours=20),
+        "subject":    "Your order has shipped",
+        "body": (
+            "Your Amazon order (#113-4829201-8847362) has shipped and is on its way. "
+            "You can track your package using the Amazon app or website.\n\n"
+            "Order: Wireless Noise-Cancelling Headphones\n"
+            "Carrier: UPS\n"
+            "Tracking: 1Z999AA10123456784"
+        ),
+        "rfc-id":  "<ship.confirm@amazon.com>",
+        "snippet": "Order #113-4829201 shipped. Track via the Amazon app.",
+    },
     "e4": {
         "from":       "Financial Aid Office <finaid@university.edu>",
         "from-email": "finaid@university.edu",
@@ -60,21 +75,6 @@ MOCK_EMAILS = {
         ),
         "rfc-id":  "<aid.update@university.edu>",
         "snippet": "Your aid package has been updated. Accept or decline by May 15th.",
-    },
-    "e5": {
-        "from":       "Amazon <shipment-tracking@amazon.com>",
-        "from-email": "shipment-tracking@amazon.com",
-        "offset":     timedelta(hours=20),
-        "subject":    "Your order has shipped",
-        "body": (
-            "Your Amazon order (#113-4829201-8847362) has shipped and is on its way. "
-            "You can track your package using the Amazon app or website.\n\n"
-            "Order: Wireless Noise-Cancelling Headphones\n"
-            "Carrier: UPS\n"
-            "Tracking: 1Z999AA10123456784"
-        ),
-        "rfc-id":  "<ship.confirm@amazon.com>",
-        "snippet": "Order #113-4829201 shipped. Track via the Amazon app.",
     },
     "e6": {
         "from":       "Mom <mom@gmail.com>",
