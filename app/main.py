@@ -8,9 +8,13 @@ from app.gmail_reasoning import find_reply_match
 from app.demo_data import MOCK_EMAILS
 from app.utils import calculate_seconds
 from collections import defaultdict
+from contextlib import asynccontextmanager
+from posthog import Posthog, new_context, identify_context
 from pydantic import BaseModel
 from datetime import datetime, timezone, timedelta
 from email.utils import parsedate_to_datetime
+import atexit
+import hashlib
 import os
 import time
 from dotenv import load_dotenv
@@ -28,7 +32,21 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="StudentOS API")
+posthog_client = Posthog(
+    api_key=os.getenv("POSTHOG_API_KEY"),
+    host=os.getenv("POSTHOG_HOST", "https://us.i.posthog.com"),
+    enable_exception_autocapture=True,
+)
+atexit.register(posthog_client.shutdown)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    yield
+    posthog_client.flush()
+
+
+app = FastAPI(title="StudentOS API", lifespan=lifespan)
 
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*").split(",")
 app.add_middleware(
@@ -56,34 +74,42 @@ def read_root(command: str, authorization: str = Header(None)):
         return "Please link your Gmail account in the Alexa app."
 
     access_token = authorization.split(" ")[1]
+    user_id = hashlib.sha256(access_token.encode()).hexdigest()[:16]
 
-    try:
-        intent = mapIntent(command)
-        logger.info(f"Mapped intent: {intent}")
-    except Exception as e:
-        logger.error(f"Error mapping intent: {e}", exc_info=True)
-        return "Sorry, I'm having trouble reaching the server. Please try again later."
+    with new_context():
+        identify_context(user_id)
+        posthog_client.capture("command received", properties={"command_length": len(command)})
 
-    if intent == "none":
-        logger.info("Intent classified as 'none'")
-        return "Sorry, I couldn't understand your command."
-
-    arguments = {}
-    if intent in intent_arguments:
         try:
-            arguments = parseArguments(command, intent)
-            logger.info(f"Parsed arguments: {arguments}")
+            intent = mapIntent(command)
+            logger.info(f"Mapped intent: {intent}")
         except Exception as e:
-            logger.error(f"Error parsing arguments for {intent}: {e}", exc_info=True)
-            return "There's a problem with the server. Please try again later."
+            logger.error(f"Error mapping intent: {e}", exc_info=True)
+            return "Sorry, I'm having trouble reaching the server. Please try again later."
 
-    try:
-        result = executeCommand(intent, arguments, access_token)
-        logger.info(f"Command executed successfully for intent: {intent}")
-        return result
-    except Exception as e:
-        logger.error(f"Unhandled error in executeCommand for intent {intent}: {e}", exc_info=True)
-        return "Sorry, I'm having trouble reaching the server. Please try again later."   
+        if intent == "none":
+            logger.info("Intent classified as 'none'")
+            posthog_client.capture("intent mapping failed", properties={"command_length": len(command)})
+            return "Sorry, I couldn't understand your command."
+
+        posthog_client.capture("intent mapped", properties={"intent": intent})
+
+        arguments = {}
+        if intent in intent_arguments:
+            try:
+                arguments = parseArguments(command, intent)
+                logger.info(f"Parsed arguments: {arguments}")
+            except Exception as e:
+                logger.error(f"Error parsing arguments for {intent}: {e}", exc_info=True)
+                return "There's a problem with the server. Please try again later."
+
+        try:
+            result = executeCommand(intent, arguments, access_token)
+            logger.info(f"Command executed successfully for intent: {intent}")
+            return result
+        except Exception as e:
+            logger.error(f"Unhandled error in executeCommand for intent {intent}: {e}", exc_info=True)
+            return "Sorry, I'm having trouble reaching the server. Please try again later."
 
 
 def executeCommand(intent: str, arguments: dict, access_token = ACCESS_TOKEN) -> str:
@@ -104,6 +130,7 @@ def executeCommand(intent: str, arguments: dict, access_token = ACCESS_TOKEN) ->
         try:
             summary = prioritized_insights(emails)
             logger.info("Email summary generated successfully")
+            posthog_client.capture("email summarized", properties={"email_count": len(emails), "hours_back": hours_back})
             return summary
         except Exception as e:
             logger.error(f"Error summarizing emails: {e}", exc_info=True)
@@ -118,6 +145,7 @@ def executeCommand(intent: str, arguments: dict, access_token = ACCESS_TOKEN) ->
             success, result = upsert_draft(draft, access_token=access_token)
             if success:
                 logger.info(f"Draft created successfully: {result}")
+                posthog_client.capture("draft created")
                 return "Draft created successfully."
             else:
                 logger.error(f"Failed to upsert draft: {result}")
@@ -141,6 +169,7 @@ def executeCommand(intent: str, arguments: dict, access_token = ACCESS_TOKEN) ->
         try:
             result = summarize_sender_emails(emails, sender_name)
             logger.info(f"Sender check completed for '{sender_name}'")
+            posthog_client.capture("sender checked")
             return result
         except Exception as e:
             logger.error(f"Error summarizing sender emails: {e}", exc_info=True)
@@ -158,6 +187,7 @@ def executeCommand(intent: str, arguments: dict, access_token = ACCESS_TOKEN) ->
         try:
             result = extract_verification_code(emails)
             logger.info("Verification code extraction completed")
+            posthog_client.capture("verification code found")
             return result
         except Exception as e:
             logger.error(f"Error extracting verification code: {e}", exc_info=True)
@@ -193,6 +223,7 @@ def executeCommand(intent: str, arguments: dict, access_token = ACCESS_TOKEN) ->
             success, result = upsert_reply(reply, best_match_id, rfc_id=emails[best_match_id]['rfc-id'], subject=emails[best_match_id]['subject'], to_email=emails[best_match_id]['from-email'], access_token=access_token)
             if success:
                 logger.info(f"Reply created successfully: {result}")
+                posthog_client.capture("reply created")
                 return "Reply created successfully."
             else:
                 logger.error(f"Failed to upsert reply: {result}")
@@ -240,6 +271,9 @@ def demo_chat(req: DemoChatRequest, request: Request):
     now = time.time()
     _demo_rate[ip] = [t for t in _demo_rate[ip] if now - t < 3600]
     if len(_demo_rate[ip]) >= _DEMO_LIMIT:
+        with new_context():
+            identify_context(ip)
+            posthog_client.capture("demo rate limit hit")
         return {"response": "Demo limit reached — please try again in an hour.", "mutation": None}
     _demo_rate[ip].append(now)
 
@@ -247,88 +281,95 @@ def demo_chat(req: DemoChatRequest, request: Request):
     if not command:
         return {"response": "Please type a command to try.", "mutation": None}
 
-    try:
-        intent = mapIntent(command)
-        logger.info(f"Demo intent: {intent}")
-    except Exception as e:
-        logger.error(f"Demo intent mapping failed: {e}", exc_info=True)
-        return {"response": "Sorry, I'm having trouble right now. Please try again.", "mutation": None}
+    with new_context():
+        identify_context(ip)
 
-    if intent == "none":
-        return {
-            "response": (
-                "Sorry, I couldn't understand that. "
-                "Try: 'Summarize my emails', 'Draft an email to Professor Chen', or 'What's my verification code?'"
-            ),
-            "mutation": None,
-        }
+        try:
+            intent = mapIntent(command)
+            logger.info(f"Demo intent: {intent}")
+        except Exception as e:
+            logger.error(f"Demo intent mapping failed: {e}", exc_info=True)
+            return {"response": "Sorry, I'm having trouble right now. Please try again.", "mutation": None}
 
-    try:
-        args = parseArguments(command, intent) if intent in intent_arguments else {}
-        logger.info(f"Demo args: {args}")
-    except Exception as e:
-        logger.error(f"Demo argument parsing failed: {e}", exc_info=True)
-        return {"response": "I had trouble parsing that request. Please try again.", "mutation": None}
+        posthog_client.capture("demo command used", properties={"intent": intent, "command_length": len(command)})
 
-    try:
-        if intent == "gmail_summarize":
-            hours_back = calculate_seconds(
-                args.get("lookback_period_value", 12),
-                args.get("lookback_period_units", "hours")
-            ) / 3600
-            filtered = _demo_filter_emails(MOCK_EMAILS, hours_back)
-            if not filtered:
-                return {
-                    "response": f"I didn't find any emails from the last {args.get('lookback_period_value', 12)} {args.get('lookback_period_units', 'hours')}.",
-                    "mutation": None,
+        if intent == "none":
+            return {
+                "response": (
+                    "Sorry, I couldn't understand that. "
+                    "Try: 'Summarize my emails', 'Draft an email to Professor Chen', or 'What's my verification code?'"
+                ),
+                "mutation": None,
+            }
+
+        try:
+            args = parseArguments(command, intent) if intent in intent_arguments else {}
+            logger.info(f"Demo args: {args}")
+        except Exception as e:
+            logger.error(f"Demo argument parsing failed: {e}", exc_info=True)
+            return {"response": "I had trouble parsing that request. Please try again.", "mutation": None}
+
+        try:
+            if intent == "gmail_summarize":
+                hours_back = calculate_seconds(
+                    args.get("lookback_period_value", 12),
+                    args.get("lookback_period_units", "hours")
+                ) / 3600
+                filtered = _demo_filter_emails(MOCK_EMAILS, hours_back)
+                if not filtered:
+                    return {
+                        "response": f"I didn't find any emails from the last {args.get('lookback_period_value', 12)} {args.get('lookback_period_units', 'hours')}.",
+                        "mutation": None,
+                    }
+                return {"response": prioritized_insights(filtered), "mutation": None}
+
+            elif intent == "gmail_check_sender":
+                sender = args.get("sender_name", "")
+                return {"response": summarize_sender_emails(MOCK_EMAILS, sender), "mutation": None}
+
+            elif intent == "gmail_verification_code":
+                return {"response": extract_verification_code(MOCK_EMAILS), "mutation": None}
+
+            elif intent == "gmail_draft":
+                recipient   = args.get("recipient_name", "")
+                description = args.get("email_description", "")
+                body        = generate_draft(recipient, description)
+                draft = {
+                    "id":        f"d_{int(time.time())}",
+                    "to":        recipient,
+                    "subject":   _demo_infer_subject(recipient),
+                    "body":      body,
+                    "timestamp": "just now",
                 }
-            return {"response": prioritized_insights(filtered), "mutation": None}
+                posthog_client.capture("demo draft created")
+                return {"response": "Draft created successfully.", "mutation": {"type": "draft_created", "draft": draft}}
 
-        elif intent == "gmail_check_sender":
-            sender = args.get("sender_name", "")
-            return {"response": summarize_sender_emails(MOCK_EMAILS, sender), "mutation": None}
+            elif intent == "gmail_reply":
+                recipient   = args.get("reply_recipient_name", "")
+                description = args.get("email_description", "")
+                compact = {
+                    mid: {"from": d["from"], "subject": d["subject"], "snippet": d["snippet"]}
+                    for mid, d in MOCK_EMAILS.items()
+                }
+                match_id = find_reply_match(compact, recipient, description)
+                if match_id == "none" or match_id not in MOCK_EMAILS:
+                    return {"response": "I couldn't find a matching email to reply to. Please try again.", "mutation": None}
+                body             = generate_reply(MOCK_EMAILS[match_id]["body"], recipient, description)
+                original_subject = MOCK_EMAILS[match_id]["subject"]
+                subject          = original_subject if original_subject.startswith("Re:") else f"Re: {original_subject}"
+                draft = {
+                    "id":        f"d_{int(time.time())}",
+                    "to":        recipient,
+                    "subject":   subject,
+                    "body":      body,
+                    "timestamp": "just now",
+                }
+                posthog_client.capture("demo reply created")
+                return {"response": "Reply draft created successfully.", "mutation": {"type": "draft_created", "draft": draft}}
 
-        elif intent == "gmail_verification_code":
-            return {"response": extract_verification_code(MOCK_EMAILS), "mutation": None}
-
-        elif intent == "gmail_draft":
-            recipient   = args.get("recipient_name", "")
-            description = args.get("email_description", "")
-            body        = generate_draft(recipient, description)
-            draft = {
-                "id":        f"d_{int(time.time())}",
-                "to":        recipient,
-                "subject":   _demo_infer_subject(recipient),
-                "body":      body,
-                "timestamp": "just now",
-            }
-            return {"response": "Draft created successfully.", "mutation": {"type": "draft_created", "draft": draft}}
-
-        elif intent == "gmail_reply":
-            recipient   = args.get("reply_recipient_name", "")
-            description = args.get("email_description", "")
-            compact = {
-                mid: {"from": d["from"], "subject": d["subject"], "snippet": d["snippet"]}
-                for mid, d in MOCK_EMAILS.items()
-            }
-            match_id = find_reply_match(compact, recipient, description)
-            if match_id == "none" or match_id not in MOCK_EMAILS:
-                return {"response": "I couldn't find a matching email to reply to. Please try again.", "mutation": None}
-            body             = generate_reply(MOCK_EMAILS[match_id]["body"], recipient, description)
-            original_subject = MOCK_EMAILS[match_id]["subject"]
-            subject          = original_subject if original_subject.startswith("Re:") else f"Re: {original_subject}"
-            draft = {
-                "id":        f"d_{int(time.time())}",
-                "to":        recipient,
-                "subject":   subject,
-                "body":      body,
-                "timestamp": "just now",
-            }
-            return {"response": "Reply draft created successfully.", "mutation": {"type": "draft_created", "draft": draft}}
-
-    except Exception as e:
-        logger.error(f"Demo execution failed for intent {intent!r}: {e}", exc_info=True)
-        return {"response": "Sorry, something went wrong. Please try again.", "mutation": None}
+        except Exception as e:
+            logger.error(f"Demo execution failed for intent {intent!r}: {e}", exc_info=True)
+            return {"response": "Sorry, something went wrong. Please try again.", "mutation": None}
 
     return {"response": "Sorry, I couldn't handle that command.", "mutation": None}
 
